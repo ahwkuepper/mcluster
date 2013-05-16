@@ -1,2 +1,4 @@
 *.o
 *~
+mcluster
+mcluster_sse
