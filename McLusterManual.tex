@@ -1,0 +1,360 @@
+\documentclass[useAMS,usenatbib]{mn2e}
+\usepackage{natbib}
+\usepackage{graphicx}
+\newcommand{\msun}{\mbox{$\,{\rm M}_\odot$}}
+
+
+
+\begin{document}
+\pagestyle{empty}
+\begin{table*}
+\begin{minipage}{\textwidth}
+\centering
+\footnotesize{
+\begin{tabular}{ccl}
+Option & Range & Meaning\\ \hline
+      -N & $0<N<Nmax$ & Number of cluster stars (specify either $N$ or $M$)\\                                 
+      -M & $M>0$ & Mass of the cluster ($\msun$; specify either $N$ or $M$)\\           
+      -P & 0/1/2/3/-1& Density profile (Plummer/King/\v{S}ubr/EFF or Nuker/homogeneous sphere)\\             
+      -W & 1.0--12.0 & $W_0$ parameter for the King model (only $P=1$, ignored if $P\neq 1$)\\                       
+      -R & $R>0$ & Half-mass radius in parsec (ignored for $P = 3$, set -1 to activate Marks \& Kroupa relation)\\         
+      -r & $0<r<c$ & Scale radius of the EFF/Nuker templates in parsec  (only $P=3$, ignored if $P\neq 3$)\\         
+      -c & $c>r$ & Cut-off radius of the EFF/Nuker templates in parsec (only $P=3$, ignored if $P\neq 3$)\\       
+      -g & $g_1>1.5$ & Power-law slope(s) of the EFF/Nuker templates (only $P=3$, ignored if $P\neq 3$), \\           
+      	   & $-\infty<g_2<\infty$  & use once for outer slope of EFF profile ($g_1$), use three times for outer slope ($g_1$), \\
+	   &$g_3> 0$ & inner slope ($g_2$) and transition parameter ($g_3$) of Nuker profile.\\ 
+      -S & 0.0--1.0 & Degree of mass segregation (0.0 means no segregation; $S<1.0$ for $P=2$)\\
+      -D & 1.6--3.0 & Fractal dimension (3.0 means no fractality)\\          
+      -T & $T>0$ & \textsc{Nbody4/6} computation time in N-body units\\                            
+      -Q & $Q\ge0$ & Virial ratio ($Q = 0.5$ for virial equilibrium)\\                                     
+      -C & 0/1/3/4 & Output type (\textsc{Nbody6}/\textsc{Nbody4}/ASCII table)/\textsc{Nbody7}\\    
+      -A & $A>0$ & \textsc{Nbody4/6/7} adjustment time in N-body units (e.g. \citealt{Heggie03})\\                            
+      -O & $O>0$ & \textsc{Nbody4/6/7} output time in N-body units\\                           
+      -G & 0/1 & Use GPU with \textsc{Nbody6/7} (no/yes)\\                   
+      -o & --- & Output name of the cluster model\\                     
+      -f & 0/1/2/3/4 & IMF (no mass function/Kroupa IMF/user defined/Kroupa IMF + optimal sampling/L$_3$ IMF)\\
+      -a & $a<0$ & IMF slope for a user defined IMF, may be used multiple times,\\
+      			&  &  from low to high mass; can also be used to set $\alpha$, $\beta$ and $\mu$ of the L$_3$ IMF (in this order)\\       
+     -m & $m>0$ & IMF mass limits ($\msun$) for IMF, has to be used multiple times, \\
+     			& & from low to high mass\\
+      -B & 0--$N/2$ & Number of binary systems (specify either $B$ or $b$)\\                        
+      -b & 0.0--1.0 & Binary fraction (specify either $B$ or $b$)\\           
+      -p & 0/1/2 & Binary pairing (random/ordered for $M > 5 \msun$/random but separate pairing for  $M > 5 \msun$)\\  
+      -s & $s\ge 0$& Seed for randomisation, set 0 for randomisation by local time\\   
+      -t & 0/1/2/3 & Tidal field (no tidal field/near-field approximation/point-mass potential/\\
+      			& & Milky-Way potential)\\           
+      -e & $e\ge0$ & Epoch for stellar evolution in Myr (only available in \texttt{mcluster\_sse})\\                
+      -Z & 0.0001-0.03 & Metallicity ($Z = 0.02$ for solar metallicity)\\          
+      -X & $X\ge0$ & Galactocentric radius vector in parsec (use 3 times for x-, y- and z-coordinate)\\       
+      -V & $V\ge0$ & Cluster velocity vector in km/s (use 3 times for x-, y- and z-coordinate)\\          
+	-x & $x\ge0$ &  External (gas) Plummer potential (use 4x for 1. gas mass [$\msun$], 2. Plummer radius [pc],\\         
+         & & 3. decay time for gas expulsion [Myr], 4. delay time for start of gas expulsion [Myr])  \\
+      -u  & 0/1 & Output units ($N$-body units/astrophysical units)\\           
+      -h/-? & --- & Display help                                        
+\end{tabular}
+}
+\caption{Overview of available command line options in \textsc{McLuster} with brief descriptions. For details on the available choices see the corresponding paragraphs. Also given are the possible ranges and the default values (which can be permanently changed within \texttt{main.c}).}
+\end{minipage}
+\label{overviewtable}
+\end{table*}
+
+\section*{McLuster manual}
+\noindent The tool \textsc{McLuster} is an open source programme that can be used to either set up initial conditions for $N$-body computations or, alternatively, to generate artificial star clusters for direct investigation. There are two different versions of the code, one basic version for generating all kinds of unevolved clusters (in the following called \texttt{mcluster}) and one for setting up evolved stellar populations at a given age. The former is completely contained in the \textsc{C} file \texttt{main.c} and the header file \texttt{main.h}. The latter (here dubbed as \texttt{mcluster\_sse}) is more complex and requires additional \textsc{FORTRAN} routines, namely the Single-Star/Binary-Star Evolution (\textsc{SSE/BSE}) routines by \citet{Hurley00, Hurley02} which are provided with the \textsc{McLuster} code. For a quick introduction read the README file which is also provided with the code. For technical details on how to generate initial conditions for star cluster in general we would like to refer to \citet{Kroupa08} and referenced literature therein. 
+
+\subsection*{Compilation}
+After extracting the archive, which can be obtained from the given web address\footnote{\texttt{www.astro.uni-bonn.de/\~{}akuepper/mcluster/mcluster.html\\or  www.astro.uni-bonn.de/\~{}webaiub/english/downloads.php}}, the basic version \texttt{mcluster} can be compiled on a \textsc{UNIX} system from the command line with\\\\
+\texttt{> cc -lm -o mcluster -fopenmp main.c\\\\}
+where \texttt{cc} may be replaced by the \textsc{C-}compiler available on your computer. It can also be compiled by using the Makefile, i.e.\\\\
+\texttt{> make mcluster\\\\}
+For the more complex version \texttt{mcluster\_sse} the Makefile has to be used. Type\\\\
+\texttt{> make mcluster\_sse\\\\}
+after which the programme should compile, generating an executable named \texttt{mcluster\_sse}. 
+\begin{itemize}
+\item Note that, when using the Makefile, you may have to change the \textsc{C-} and/or \textsc{FORTRAN-}compiler entry as well as the path of your compiler. 
+\item In case you want to apply any change to the code make sure that you first delete all object files by typing\\\\
+\texttt{> make clean\\\\}
+before re-compiling the code.
+\item If \textsc{OpenMP} is not supported by your system you can deactivate it at compilation by setting the flag \texttt{-D NOOMP}, i.e.\\\\
+\texttt{> cc -lm -o mcluster -D NOOMP main.c\\\\}
+which can also be changed accordingly in the Makefile.
+\end{itemize}
+
+\subsection*{Input}
+There are two ways of choosing the desired cluster parameters. One is to set the parameters manually within \texttt{main.c}, within the upper part of the code right at the beginning of the \texttt{main} routine where all variables are declared. Note that, after changing  the value of a variable, you have to compile the code again. The more convenient way is therefore to pass arguments to the code at the time of execution via the command line (see Tab.~\ref{overviewtable} for an overview of available options). Type\\\\
+\texttt{> mcluster -h\\\\}
+or\\\\
+\texttt{> mcluster\_sse -h\\\\}
+respectively, to get a quick help on the available parameters and their usage. 
+\begin{itemize}
+\item In case you have not specified a certain parameter, the default value as set within the \texttt{main} routine is used.
+\item Not all parameters can be set via the command line, some have to be changed within the code.
+\item All command line arguments are the same for \texttt{mcluster} and \texttt{mcluster\_sse}, except for the age parameter (\texttt{-e}) which is mentioned in more detail below.
+\end{itemize}
+ 
+\subsection*{Density profile}
+\textsc{McLuster} can generate star clusters with various radial density profiles (option \texttt{-P}). In all cases the total mass of the cluster has to be chosen separately (options \texttt{-M} or \texttt{-N}). The available profiles are:
+\begin{enumerate}
+\item The simplest option is the analytical \citet{Plummer11} profile (option \texttt{-P0}) which is the simplest (two-parameter only) stationary solution to the collisionless Boltzmann equation. For this profile only the half-mass radius has to be specified additionally (option \texttt{-R}, in parsec). The Plummer profile is in principle infinitely extended but gets automatically truncated at the theoretical tidal radius of the cluster in case a tidal field has been specified (see below).
+\item A more sophisticated set of models is given by the distribution function of \citet{King66}. For this profile (option \texttt{-P1}) the half-mass radius and the dimensionless value of $W_0$ which specifies the model concentration (option \texttt{-W} ranging from 2.0, i.e. low concentration, to 12.0, i.e. high concentration) has to be specified. The underlying routine for generating the density distribution from the distribution function is based on \textsc{king0} by Douglas C.~Heggie (e.g. \citealt{Heggie92}). Note that the final density distribution gets scaled to exactly match the desired half-mass radius; the radius at which the density becomes zero does not necessarily match the theoretical tidal radius in this case.
+\item \citet{Subr08} give a density profile which can be chosen to be mass segregated. For this density profile (option \texttt{-P2}) the half-mass radius and an additional mass-segregation parameter (option \texttt{-S}, ranging from 0.0--0.99, but $S<0.5$ for reasonable models in virial equilibrium) have to be chosen. For \texttt{-S0.0} the {\v S}ubr profile is equal to a Plummer profile. \textsc{McLuster} uses a slightly modified version of the \textsc{Plumix} routine by Ladislav {\v S}ubr to set up this kind of profile.
+\item Young clusters in the Large Magellanic Cloud were found to follow a two-dimensional density profile consisting of a core and a power-law tail without visible tidal truncation. \citet{Elson87} give a simple analytical formula for such profiles, which can be deprojected with \textsc{McLuster} and used to set up 3d star cluster models (option \texttt{-P3}). Since those models are in principle infinitely extended, the so-called EFF models do not get scaled to a certain half-mass radius, but rather require specification of a cut-off radius to which the profile should extend (option \texttt{-c}, in parsec). The central density then gets calculated automatically using the specified cluster mass (see below). In addition, the radius of the two-dimensional core (option \texttt{-r}, in parsec) and the slope of the power-law part of the profile (option \texttt{-g}) have to be chosen. Values for \texttt{g} larger than 1.5 usually yield stable solutions, observational values lie at about 2.0 for young star clusters in the LMC \citep{Elson87}. The velocity field of this family of profiles is generated using the algorithm described in \citet{Kroupa08}.
+\item The EFF template is a special case of the so-called Nuker template (see \citealt{Lauer95} and \citealt{Byun96} for an extensive discussion of this empirical template). The two-dimensional Nuker template has the functional form
+\begin{equation}
+f(x) = k\,2^{\frac{g_1-g_2}{g_3}}  \left[\frac{x}{r}\right]^{-g_2} \left[1 + \left(\frac{x}{r}\right)^{g_3}\right]^{-\frac{g_1-g_2}{g_3}},
+\end{equation}
+where $k$ is a constant which gets determined according to your choices of the cut-off radius (option \texttt{-c}, in parsec), and the two-dimensional core radius $r$ (option \texttt{-r}, in parsec). The Nuker template is identical to the EFF template for $g_2 = 0$ and $g_3 = 2$, which are the default values for $g_2$ and $g_3$. That is, if you only specify $g_1$ with option \texttt{-g} you will get a cluster with an EFF profile.
+\item A further possibility to set up the density distribution is given by option \texttt{-P-1}. In this case the final cluster has no density gradient, but consists of stars which are homogeneously distributed within a sphere. The size of the sphere is specified by choosing the half-mass radius (thus, the limiting radius of the sphere will be a factor $2^{1/3}$ larger). This option is especially useful in case of fractal initial conditions (see below). The velocities of the stars are isotropic and drawn from a Gaussian distribution. 
+\end{enumerate}
+\begin{itemize}
+\item The exact matching of the actual half-mass radius as resulting from the discretized model to the specified value may be switched off within the \texttt{main} routine, but is not recommended. Set \texttt{match = 0} and compile the code again.
+\item By setting the half-mass radius to -1, the cluster mass--half-mass radius relation from \citet{Marks12}, $R = 0.1M^{0.13}$, will be used to dertermine the initial half-mass radius of the cluster.
+\end{itemize}
+
+\subsection*{Tidal field}
+As mentioned above, the choice of the tidal field and of the cluster orbit may influence the extent of the density profile. \textsc{McLuster} offers different kinds of tidal fields which can be specified with the option \texttt{-t}. In addition it may be necessary to specify the galactocentric radius vector and the orbital velocity vector. This can be done by using the option \texttt{-X} (in parsec) and \texttt{-V} (in km/s), respectively, three times for the x-, y- and z-component (within a Cartesian coordinate system where the galactic disk would lie in the x-y-plane, if applicable). As an example, \texttt{-X8500.0 -X0.0 -X0.0 -V0.0 -V220.0 -V0.0} would give the motion of the Local Standard of Rest. This option is especially useful when generating input for $N$-body computations, since the input parameter file is automatically adjusted accordingly.
+\begin{enumerate}
+\item For a cluster in isolation choose \texttt{-t0}. No truncation is applied to profiles like the Plummer profile in this case.
+\item A linearized tidal field, as described in \citet{Fukushige00} can be chosen with \texttt{-t1}. If you have selected to generate input files for \textsc{Nbody6} (see below) then the values for the Local Standard of Rest are used. In all other cases the galactocentric distance has to be specified additionally. Therefore use the option \texttt{-X} and set all but one component to zero, e.g. \texttt{-X6000.0 -X0.0 -X0.0} for an orbit at 6 kpc. No orbital velocity vector has to be specified as the linearized tidal field mimics a circular orbit.
+\item If you choose \texttt{-t2} then you get a point-mass galaxy for which you can specify any galactocentric radius and orbital velocity (options \texttt{-X} and \texttt{-V}). The mass of the galaxy is set within the header of the \texttt{main} routine. By default, \texttt{M1pointmass} is set such that you get an orbital velocity of 220 km/s at a galactocentric radius of 8.5 kpc.
+\item For a more realistic, Milky-Way potential you can choose option \texttt{-t3}. This potential consists of a central point mass/bulge, modelled as a Hernquist potential \citep{Hernquist90}, a Miyamoto disk \citep{Miyamoto75} and a logarithmic (phantom dark-matter) halo, with values as given in \citet{Allen91}. If you set up initial condition for \textsc{Nbody6} then the logarithmic halo will be adjusted such that the circular velocity, \texttt{VCIRC}, at some radius, \texttt{RCIRC}, has a specific value. The default is 220 km/s and 8.5 kpc, respectively, which may be changed in the header of the \texttt{main} routine. The other parameters of this potential may also be changed there.
+\item In addition to the choices given above you can add an external Plummer potential with a certain mass and a certain Plummer radius to the cluster when using \textsc{Nbody6}. This potential can, for example, represent a gas sphere in which the cluster is embedded at birth (see e.g. \citealt{Baumgardt07}). Two more parameters control the decay of this external potential, emulating the initial gas expulsion process. In total, four parameters are therefore needed in order to specify the external Plummer potential: 1. the (gas) mass of the Plummer sphere [$\msun$], 2. the Plummer radius [pc], 3. the decay time for gas expulsion [Myr], and 4. the delay time for the start of gas expulsion [Myr]. That is, \texttt{-x} always has to be used exactly four times. The decay time can be set to zero in case no decay is desired. Note that these choices do not affect the velocities of the stars in the output (especially when \texttt{-C3} is used) since the scaling of the velocities to the total mass of the cluster and the gas sphere is done within \textsc{Nbody6}. 
+ 
+\end{enumerate}
+
+\subsection*{Cluster mass and stellar mass function}
+You can either fix the total number of stars in your cluster (option \texttt{-N}) or you can set a desired total mass (option \texttt{-M}, in solar units). In the latter case, \textsc{McLuster} draws stars from the selected mass function until the desired mass is exceeded. The mass function of stars in the cluster can be defined to be one of the following four kinds (option \texttt{-f}).
+\begin{enumerate}
+\item All stars can have the same mass (option \texttt{-f0}). The mass of each star is by default assumed to be $1\msun$, which may be changed within the \texttt{main} routine (parameter \texttt{single\_mass}).
+\item The canonical \citet{Kroupa01} initial mass function can be used with \texttt{-f1}. This IMF has a slope of $\alpha_1 = -1.3$ for stellar masses $m = 0.08 - 0.5 \msun$, and the Salpeter slope
+$\alpha_2 = -2.3$ for $m > 0.5 \msun$. The lower and upper IMF limit, \texttt{mlow} and \texttt{mup}, are by default $0.08\msun$ and $100\msun$, respectively, but these values may be changed in the \texttt{main} routine. 
+\item More sophisticated, multi-power-law IMFs can be set up with option \texttt{-f2}. Therefore, \textsc{McLuster} uses the routine \textsc{mufu} by Ladislav {\v S}ubr. This routine allows to define several mass limits and corresponding mass-function slopes between these limits. The limits and the slopes can be passed to \textsc{McLuster} with the options \texttt{-m} and \texttt{-a}, respectively. These options have to be used multiple times, where one more limit has to be passed to \textsc{McLuster} than number of slopes. For example, the Kroupa IMF with a steeper slope of $\alpha_3 = -2.7$ for stars more massive than $5\msun$ up to a maximum mass of $80\msun$ would be \texttt{-f2 -m0.08 -a-1.3 -m0.5 -a-2.3 -m5.0 -a-2.7 -m80.0}.
+\item The canonical IMF can be used with optimal sampling \citep{Kroupa11} by choosing \texttt{-f3}. It is the same IMF as \texttt{-f1}, but by using optimal sampling the stochacity of the rendition process is minimized and the distribution of stellar masses perfectly follows the desired mass function slopes. Note that optimal sampling always uses the Weidner relation to determine the upper mass limit (see below). Furthermore, optimal sampling cannot be used to set up evolved clusters, i.e.~\textsc{SSE} is always switched off (see below).
+\item \citet{Maschberger12} describes the initial mass function for the whole mass range by a generalised log-logistic distribution  without any breaks and a minimum number of parameters. This $L_3$ IMF can be used with \texttt{-f4}. It requires the parameters $\alpha$, $\beta$ and $\mu$, which can be set with the option \texttt{-a} (use \texttt{-a} three times to specify the three paramters in this exact order). Default parameters are high-mass exponent $\alpha=2.3$, $\beta=2$ and $\mu=0.2 \msun$, corresponding to the canonical \citet{Kroupa01} IMF. The lower and upper mass limit can be set by using \texttt{-m} twice.
+\end{enumerate}
+\begin{itemize}
+\item The  maximum stellar mass -- cluster mass relation found by \citet{Weidner06} can be used to automatically cut off the IMF at the corresponding upper mass limit. This routine is switched off by default but may be activated by setting the \texttt{weidner} parameter in the \texttt{main} routine to 1.
+\item In \textsc{McLuster} there is a maximally allowed stellar mass limit defined through the parameter \texttt{upper\_IMF\_limit}. This parameter is set to $100\msun$ since \textsc{Nbody6}, i.e. the stellar evolution routine \textsc{SSE} within \textsc{Nbody6}, does not allow higher masses. In case you need higher stellar masses anyway, set this parameter within the \texttt{main} routine to the desired value but keep in mind that stars with mass larger than $100\msun$ are evolved as $100\msun$ stars.
+\end{itemize}
+
+\subsection*{Mass segregation}
+With \textsc{McLuster} it is possible to apply any degree of primordial mass segregation to all available density profiles, not only to the {\v S}ubr profile as already mentioned above. Therefore, the method as described in \citet{Baumgardt08a} is used. The advantage of this method is that the chosen density profile is not changed with increasing degree of mass segregation as is the case for the {\v S}ubr profile. 
+
+In short, it works as follows: for a cluster of $N$ stars \textsc{McLuster} first draws the stellar masses from the selected IMF (see above) and then creates $N^\prime = N \langle m\rangle / m_{low}$ orbits, where $\langle m \rangle$ is the mean stellar mass and $m_{low}$ the lowest stellar mass in the cluster. These orbits get ordered by their specific energy, from low energy to high energy orbits. Then the stellar masses are also ordered and the cumulative mass function, $M_{cum}(i) = \sum_{j=1}^i M(j)$ is evaluated from this mass array, whereby $i=1\ldots N$. After dividing $M_{cum}(i)$ by the total cluster mass, the function is normalised such that it runs from 0 to 1. Finally, for any star an orbit from the list of energy-ordered orbits is chosen from the orbits between $N^\prime M_{cum}(i-1)$ and $N^\prime M_{cum}(i)$.
+
+If the masses in the mass array are perfectly ordered from highest to lowest then this will yield a completely mass segregated cluster. That is, the highest mass star is on the lowest energy orbit, and the lowest mass star is on the highest energy orbit. 
+
+Intermediate degrees of mass segregation can be achieved by non-perfect ordering. In \textsc{McLuster} this is realised as follows: first, all $N$ stellar masses are ordered from highest to lowest. Then, beginning with the highest mass, the masses are written to a new array, where the $i$-th massive star is written to the $j$-th empty slot counting from 0 to $N-i$. $j$ is generated using 
+\begin{equation}
+j = (N-i)\left(1-X^{1-S}\right),
+\end{equation} 		
+where $X$ is a random number between 0 and 1, and $S$ is the mass segregation parameter. When $S$ is zero, $j$ can have all values from 0 to $N-i$ and we end up with a random distribution. But when $S$ is 1, then $j$ is always zero and we reproduce the perfectly ordered array we started with. That is, because every star $i$, beginning with the most massive one, gets written to the next empty slot which is slot $i$. By choosing $S$ values between 0 and 1 we can get intermediate degrees of partial mass segregation (option \texttt{-S}). Unlike for the {\v S}ubr profile, $S$ can explicitly be chosen to be 1.0. Moreover, for all values of $S$ we get clusters in virial equilibrium (if not explicitly specified differently) with the desired (mass) density profile.
+
+\subsection*{Fractality}
+Star clusters are not born in perfect symmetry. They are rather formed in collapsing, fractal molecular clouds (see e.g. \citealt{Gutermuth08, Koenyves10}). With \textsc{McLuster} you can set up two kinds of fractal initial conditions. First, you can set up a fractal distribution of stars within a sphere of constant average density, similarly as described in \citet{Goodwin04}. Secondly, you can add fractal substructure to any of the above given density profiles.
+\begin{enumerate}
+\item When you choose a homogeneous density profile (option \texttt{-P-1}) the cluster stars get distributed within a sphere as follows. The first star (a so-called parent) is placed in the middle of a box of size 2 (arbitrary units), then this box is split into 8 sub-boxes of half the initial box size. In the centre of each sub-box a further star is placed (a so-called child), whereupon each sub-box is split up into 8 smaller pieces, such that each child now becomes a parent on its own. By applying a small random offset to each star from its sub-box centre, we make sure that the final cluster does not look too grid-like. This is repeated until we have generated $128.0\times8^{\log(N)/\log(8)}$ stars or until the total number of stars would exceed this number with the next generation of children. From these stars we randomly draw $N$ stars with radial distances of less than unity from the centre of the initial box. We end up with a homogeneous sphere of stars.
+
+Now, if not every sub-box gets a new star, and only those sub-boxes get sub-divided which have a star in their centre, then the final distribution of stars becomes fractal. The probability that a sub-box gets a star can be expressed as $2^{(D-3)}$, where $D$ is the fractal dimension (option \texttt{-D}). If $D$ is chosen to be 3.0 then we get no fractality since the probability is unity, i.e. every parent gets 8 children. If it is, e.g., 2.0 then only every second sub-box gets a star, or, on average, every parent has 4 children. 
+
+Corresponding stellar velocities are drawn from a Gaussian distribution, and re-scaled such that all children of one parent are in virial equilibrium and the total mean velocity in one sub-group is unity (arbitrary units). In addition, each child gets the velocity of its parent. In a later step, \textsc{McLuster} re-scales the phase-space coordinates of the stars such that the cluster is in virial equilibrium (if not specified differently). In this way, we get a fractal structure consisting of coherently moving, gravitationally bound substructures. 
+
+\item Alternatively, we can choose to set up fractal clusters which follow a given density profile like, e.g., the Plummer profile or the King profile, but which show fractal substructure. This is realised by first generating a sphere of stars of radius unity with the above procedure. But now this distribution of stars gets folded with the chosen density profile. Therefore the radius of each star first gets re-scaled by its absolute value to the power of three. In this way, we get $N$ stars with radii distributed homogeneously between 0 and 1, but which show substructure in 6D phase space. These radii are used as seeds to compute a corresponding radius within the specified density profile. In a last step, the space coordinates of each star get scaled by this newly generated radius. In this way the fractal distribution is conserved but folded with the specific density profile. Moreover, the velocity of each star is scaled to the expected velocity of a star at the given radius within the specified density profile. 
+
+Note that the method described here is an ad hoc introduction of substructure which, like all other methods for generating substructured models, does not rely on any physical motivation. In this way, the generated clusters can have any degree of substructure and a smooth transition from spherical symmetry to substructuredness can be realised. This may be useful in some applications but is not meant to accurately reproduce observational substructure. In fact, due to the radial re-scaling the substructure gets stretched which produces long filaments in the final clusters. These filaments may be compared to the filamentary structure of molecular gas in star forming regions.
+\end{enumerate}
+\begin{itemize}
+\item In order to guarantee a minimum of spherical symmetry, you can tell \textsc{McLuster} to give 8 children to the first ``ur-parent''. In this way, you avoid too large asymmetries. This will lead to less differing results between initial conditions generated with different random seeds, but does on the other hand not yield perfectly fractal clusters. This tweak can be switched off within the header of the \texttt{main} routine. Set the \texttt{symmetry} parameter to 0 and re-compile. 
+\item Once in a while \textsc{McLuster} gets stuck in the fractality sub-routine. In this case a restart with a different random seed should help.
+\end{itemize}
+
+\subsection*{Binaries}
+After the stellar masses got drawn from an initial mass function, you can choose to let \textsc{McLuster} set up binary systems. You can specify either the desired number of binary systems (option \texttt{-B}, values from 0 to $N$/2) or you can specify a fraction of stars which should be in binary systems (option \texttt{-b}, values from 0 to 1). Thus, from all $N$ stars, $N\times b/2$ or $B$ binaries are formed, respectively. The binaries are then replaced by a centre-of-mass (CoM) particle for the rest of the procedure. Only in the very end, after the density profile has been established and the velocities of the cluster members have been scaled appropriately, the CoM particles get replaced by their two constituent stars. The binary orbital plane is oriented randomly and the orbital phase is also chosen randomly. The internal properties of the binaries can be generated according to the following semi-major axis distributions which can be selected in the header of the \texttt{main} routine (parameter \texttt{adis}). 
+\begin{enumerate}
+\item A flat distribution of semi-major axes can be specified with \texttt{adis = 0}. In addition, you have to choose a minimum and a maximum semi-major axis (parameters \texttt{amin} and \texttt{amax}).
+\item If \texttt{adis } is set to 1 (default) then the semi-major axis of each binary is computed from a period which was drawn from the \citet{Kroupa95a} period distribution (see also \citealt{Kroupa08}). This is the preferred distribution function as it unifies the observed Galactic-field and the pre-main-sequence population.
+\item If you want the semi-major axes to be generated from the \citet{Duquennoy91} Galactic-field period distribution then you have to set \texttt{adis = 2}.
+\end{enumerate}
+\begin{itemize}
+\item The pairing of primary and secondary components of the binaries can be chosen to be either random, ordered, or separate but random. In the first case (option \texttt{-p0}), any two binary components are paired randomly together. In the second case (option \texttt{-p1}), the stellar masses above a certain threshold (parameter \texttt{msort} in the \texttt{main} routine) get ordered from most to least massive. The rest of the stars are put in random order onto the list below the last star with mass above \texttt{msort}. The pairing of binaries now starts with the most massive star which gets paired together with the second-most massive, then the third with the forth, and so on down the list. In the case of option \texttt{-p2}, the stars above the threshold \texttt{msort} are randomly paired among each other instead of ordered. The motivation for ordered and separate but random pairing lies in extensive observational data showing that massive O and B stars are more likely to be found in an equal mass binary system \citep{Sana11}. Below \texttt{msort} pairing remains random, which is consistent with the binary-star observational data \citep{Kroupa08}. The default value of \texttt{msort} is $5\msun$, in rough agreement with recent findings (e.g. \citealt{Kobulnicky07}). 
+\item The period distribution of massive O + OB spectroscopic binaries has been found to be significantly different from what is observed for lower-mass binares (see \citealt{Sana11}). Massive binaries are found to have short periods in the range from $\approx2$ days to $\approx10$ years. The observed period distribution is well described by a bi-modal \"Opik law with a break point around 10 days. By setting the parameter \texttt{OBperiods} in the \texttt{main} routine to 1, all binaries with primary masses above \texttt{msort} will be set up using this empirical period distribution. By activating this flag, these high-mass binaries will also be exempt from pre-main sequence eigenevolution (see below). 
+\item To correct for the fact that short-period binaries in the Milky Way do not show high eccentricities \citep{Mathieu94}, \citet{Kroupa95b} introduces an analytical correction for such systems, which is attributed to pre-main sequence eigenevolution between the constituent stars. This correction can be switched off by setting the parameter \texttt{eigen = 0} in the \texttt{main} routine. This should definitely be done when using the \textsc{SSE} version of \textsc{McLuster}
+\item Eccentricities, $e$, are drawn from a thermal eccentricity distribution, i.e. $f(e) = 2e$ (e.g. \citealt{Duquennoy91}; see also \citealt{Kroupa08}).
+\item Eccentricities for high-mass binaries are drawn from the \citet{Sana11} eccentricity distribution, in case the parameter \texttt{OBperiods} in the \texttt{main} routine is set to 1.
+\end{itemize}
+A discussion of binary systems and their formation can be found in \citet{Kroupa09}.
+
+\subsection*{Stellar evolution}
+\textsc{McLuster} contains the \textsc{SSE} routines by \citet{Hurley00}, which are also used in, e.g., \textsc{Nbody6} for stellar evolution. If you just want to generate star clusters consisting of zero-age main sequence (ZAMS) stars then you only need the basic version \texttt{mcluster}. In case you want to set up a cluster with an evolved stellar population then you have to use \texttt{mcluster\_sse} which makes use of those \textsc{SSE} routines. In this case you have to specify an age for the cluster population (option \texttt{-e}, in Myr). The evolution of the stars is done in the very beginning of the programme. When the stars are drawn from the IMF they get immediately evolved to the desired age. The masses of the evolved stars are then summed up and additional stars are generated until the desired cluster mass is exceeded or the desired number of stars is reached. The stellar parameters derived from \textsc{SSE} for each star are stored in an additional file, which also has to be passed to \textsc{Nbody6} (see below).
+\begin{itemize}
+\item The internal parameters of \textsc{SSE} can be changed within the header of the \texttt{main} routine (not recommended).
+\item \textsc{SSE} cannot be used with optimal sampling of the IMF (\texttt{-f3}).
+\item In case a star becomes a neutron star or a black hole \textsc{SSE} assigns a kick velocity to the remnant (if not specified differently). The kick velocity can be used to remove the remnant from the cluster. Therefore the present-day escape velocity of the cluster at its half-mass radius is calculated and if the kick velocity exceeds this velocity it gets removed. If you want to keep all compact remnants set the parameter \texttt{remnant = 0} in the \texttt{main} routine.
+ \item The metallicity, $Z$, can be set with option \texttt{-Z}. Alternatively, you can specify the metallicity as [Fe/H] within the \texttt{main} routine, the corresponding $Z$ value is computed using the relation given in \citet{Bertelli94}. Make sure that in this case you set $Z = 0$ beforehand. 
+\item In case you are generating binaries and have selected ordered pairing for stars above a certain mass, \texttt{msort} (see above), then the ZAMS mass is used to decide whether a star is paired randomly to another star or not.
+\item The components of binaries are independently evolved as single stars with \textsc{SSE}. For a more advanced treatment of stars in binaries, the Binary-Star Evolution (\textsc{BSE}) routines by \citet{Hurley02} are also included in \textsc{McLuster}. Therefore, at the very end of the cluster generation procedure, when the binary CoM particles are replaced by their constituents and the orbital elements are generated, the masses of the components are reset to their ZAMS mass. Then the two stellar masses, a semi-major axis and an eccentricity are passed to \textsc{BSE}, which finally returns corresponding evolved values. This feature is switched off by default but should be activated when using \textsc{SSE} by setting the parameter \texttt{BSE} to 1 in the \texttt{main} routine. Note that eigenevolution should be switched off then (set  \texttt{eigen = 0}).
+\end{itemize}
+
+
+\subsection*{Output}
+Up to now \textsc{McLuster} can generate input for \textsc{Nbody6} (option \texttt{-C0}, \citealt{Aarseth03, Nitadori12}), \textsc{Nbody4} (option \texttt{-C1}) and  \textsc{Nbody7} (option \texttt{-C4}, \citealt{Aarseth12}), or it can write an ASCII table of stars and their properties (option \texttt{-C3}). 
+\begin{enumerate}
+\item In the first three cases, there will be three output files which can be named with option \texttt{-o}. For example, \texttt{-o mycluster} will yield the files \texttt{mycluster.input}, containing all the input parameters for the run, and \texttt{mycluster.fort.10}, containing the masses, positions and velocities, and  \texttt{mycluster.info} giving a summary of the \textsc{McLuster} input parameters. Note that  \texttt{mycluster.fort.10} has to be renamed to \texttt{fort.10} at the time of execution in order to be recognised by \textsc{Nbody4/6/7}. When using \texttt{mcluster\_sse} there will be another file named \texttt{mycluster.fort.12}. This file also has to be renamed within the directory of the run to \texttt{fort.12}. The name \texttt{mycluster} is just added to the file names for convenience. Thus, a directory for an  \textsc{Nbody4/6/7} run should contain:
+\begin{enumerate}
+\item \texttt{mycluster.input},
+\item \texttt{fort.10},
+\item \texttt{fort.12}.
+\end{enumerate}
+The run is then started with the usual command, i.e., \\\\
+\texttt{> /.../nbody6 < mycluster.input}\\\\
+where \texttt{/.../} should be replaced by the path to your \textsc{Nbody4/6/7} installation. 
+\item In the case of \texttt{-C3} a file named \texttt{mycluster.txt} will be created containing mass, positions ($x$, $y$, $z$) and velocities ($v_x$, $v_y$, $v_z$). If you are using \texttt{mcluster\_sse} then this file will also contain for each star the ZAMS mass\footnote{from \textsc{SSE}, in $\msun$}, the stellar type\footnote{from \textsc{SSE}, see \citealt{Hurley00}}, the epoch of the star\footnote{from \textsc{SSE}, in Myr}, its spin\footnote{from \textsc{SSE}, in km/s}, its radius\footnote{from \textsc{SSE}, in solar units}, its luminosity\footnote{from \textsc{SSE}, in solar units}, its age  in Myr, its metallicity ($Z$), its absolute $V$ magnitude, its apparent $V$ magnitude\footnote{assuming a distance \texttt{Rgal} from the observer which can be changed in the \texttt{main} routine}, $B-V$, its effective temperature (K), a random error for the $V$ magnitude, and a random error for $B-V$. The last six are generated assuming observations with an 8m-class telescope from a distance \texttt{Rgal} (see \citealt{Kuepper11}). 
+\end{enumerate}
+\begin{itemize}
+\item In addition you have to specify whether you want the output to be in $N$-body units (see e.g. \citealt{Heggie03}, option \texttt{-u0}) or astrophysical units (option \texttt{-u1}). For the \textsc{McLuster} output to serve as input for \textsc{Nbody6} and \textsc{Nbody4} this output should always be in $N$-body units.
+\item With the ASCII table output you can easily draw a colour-magnitude diagram. Use columns 18(+21) versus 17(+20) for a diagram showing $B-V$ versus apparent $V$ magnitude (+random errors).
+\item \textsc{McLuster} automatically computes a radial density profile and a cumulative radial density profile. Both are by default printed to the screen. This may be switched off within the \texttt{main} routine (parameters \texttt{create\_radial\_profile = 0} or \texttt{create\_cumulative\_profile = 0}, respectively).
+\end{itemize}
+
+\subsection*{Miscellaneous}
+\begin{itemize}
+\item The virial ratio, $Q = -E_{kin}/E_{pot}$, where $E_{kin}$ is the total kinetic energy of the single cluster stars and $E_{pot}$ their potential energy, can be set with the parameter \texttt{-Q}. Note that this only affects the input file for $N$-body computations but not the stellar velocities in the table of stars (there the virial ratio will always be 0.5, i.e. virial equilibrium). The velocities get scaled within \textsc{Nbody4/6} according to your choice of $Q$. 
+\item The random seed can be set with the parameter \texttt{-s} which can be any positive integer. In the case of \texttt{-s0} \textsc{McLuster} will take the local time as random seed.
+\item There is an upper limit of temporary stars or orbits within \textsc{McLuster}. This number, \texttt{Nmax}, is set to 1.500.000 by default, i.e. \textsc{McLuster} allocates memory accordingly. When applying mass segregation or fractality to a cluster, many more temporary stars/orbits have to be generated than finally needed. Especially if a cluster shall be mass segregated and fractal at the same time this number may easily be exceeded. In this case you should increase it in the \texttt{main} routine. 
+\item A few more parameters and command line arguments are available (see option \texttt{-h} and the header of the \texttt{main} routine) which mostly affect flags for $N$-body computations.
+\end{itemize}
+
+\subsection*{Examples}
+If no command line arguments are passed to \textsc{McLuster} it will use the default parameter values which are specified and which can be changed within the \texttt{main} routine. By typing\\\\
+\texttt{> mcluster}\\\\
+a file \texttt{test.txt} is created. This default cluster has $1000\msun$ ($\sim 1800$ stars), a half-mass radius of 0.8 pc, a Plummer density distribution, is in a Milky-Way tidal field with LSR values, uses the Kroupa IMF and has no binaries. The entries in the data table are in astrophysical units. With\\\\
+\texttt{> mcluster -C0 -u0}\\\\
+the same cluster is written to the files \texttt{test.input} and \texttt{test.fort.10} but in $N$-body units. This can be passed to \textsc{Nbody4/6} as stated above. The clusters used in this work were created using, e.g.,\\\\
+\texttt{> mcluster -M100000.0 -P3 -r0.1 -c20.0 -g2.0 -S1.0 -C0 -G1 -o R136 -f1 -b0.2 -p1 -s2 -Z0.01 -u0}\\\\
+for the fully mass segregated $N$-body model. The arguments stand for: a total mass of $100.000\msun$ (\texttt{-M}), the EFF density profile (\texttt{-P}) with a 2d core radius of 0.1 pc (\texttt{-r}), a cut-off radius of 20 pc (\texttt{-c}) and a 2d power-law slope of -2 (\texttt{-g}). It is completely mass segregated (\texttt{-S}), the output is for \textsc{Nbody6} (\texttt{-C}), and we use a GPU (\texttt{-G}). The output is named R136 (\texttt{-o}), we use a Kroupa IMF (\texttt{-f}), 20\% binaries (\texttt{-b}) and ordered pairing for massive stars (\texttt{-p}). The random seed of our model is 2 (\texttt{-s}) and the metallicity is 0.01 (\texttt{-Z}). The output is in $N$-body units (\texttt{-u}) since we want to pass it to \textsc{Nbody6}.
+
+\section*{Acknowledgments}
+The authors are grateful to Sverre Aarseth for making his \textsc{Nbody} codes accessible to the public. Moreover, they would like to thank Douglas Heggie, Ladislav {\v S}ubr and Jarrod Hurley for allowing the usage of their codes within \textsc{McLuster}. Many thanks go to all the people who reported bugs or who suggested improvements. The code makes use of the Numerical Recipes \citep{Press86}.
+
+\begin{thebibliography}{99}
+
+\bibitem[\protect\citeauthoryear{Aarseth}{2003}]{Aarseth03}
+Aarseth S.~J., 2003, Gravitational N-Body Simulations, Cambridge, UK, Cambridge University Press
+
+\bibitem[\protect\citeauthoryear{Aarseth}{2012}]{Aarseth12} 
+Aarseth S.~J., 2012, MNRAS, 422, 841 
+
+\bibitem[\protect\citeauthoryear{Allen \& Santillan}{1991}]{Allen91}
+Allen C., Santillan C., 1991, RMxAA, 22, 255
+
+\bibitem[\protect\citeauthoryear{Baumgardt \& Kroupa}{2007}]{Baumgardt07} 
+Baumgardt H., Kroupa P., 2007, MNRAS, 380, 1589 
+
+\bibitem[\protect\citeauthoryear{Baumgardt, De Marchi \& Kroupa}{2008a}]{Baumgardt08a}
+Baumgardt H., De Marchi G., Kroupa P., 2008a, ApJ, 685, 247
+
+\bibitem[\protect\citeauthoryear{Bertelli et al.}{1994}]{Bertelli94}
+Bertelli G., Bressan A., Chiosi C., Fagotto F., Nasi E., 1994, A\&AS, 106, 275
+
+\bibitem[\protect\citeauthoryear{Byun et al.}{1996}]{Byun96} 
+Byun Y.-I., et al., 1996, AJ, 111, 1889
+
+\bibitem[\protect\citeauthoryear{Duquennoy \& Mayor}{1991}]{Duquennoy91} 
+Duquennoy A., Mayor M., 1991, A\&A, 248, 485 
+
+\bibitem[\protect\citeauthoryear{Elson, Fall \& Freeman}{1987}]{Elson87} 
+Elson R.~A.~W., Fall S.~M., Freeman K.~C., 1987, ApJ, 323, 54 
+
+\bibitem[\protect\citeauthoryear{Fukushige \& Heggie}{2000}]{Fukushige00}
+Fukushige T., Heggie D.~C., 2000, MNRAS, 318, 753
+
+\bibitem[\protect\citeauthoryear{Goodwin \& Whitworth}{2004}]{Goodwin04}
+Goodwin S.~P., Whitworth A.~P., 2004, A\&A, 413, 929
+
+\bibitem[\protect\citeauthoryear{Gutermuth et al.}{2008}]{Gutermuth08} 
+Gutermuth R.~A., et al., 2008, ApJ, 674, 336 
+
+\bibitem[\protect\citeauthoryear{Heggie \& Aarseth}{1992}]{Heggie92}
+Heggie D.~C., Aarseth S.~J., 1992, MNRAS, 257, 513
+
+\bibitem[\protect\citeauthoryear{Heggie \& Hut}{2003}]{Heggie03}
+Heggie D.~C., Hut P., 2003, The Gravitational Million-Body Problem, Cambridge, UK, Cambridge University Press
+
+\bibitem[\protect\citeauthoryear{Hernquist}{1990}]{Hernquist90}
+Hernquist L., 1990, ApJ, 356, 359
+
+\bibitem[\protect\citeauthoryear{Hurley, Pols \& Tout}{2000}]{Hurley00}
+Hurley J.~R., Pols O.~R., Tout C.~A., 2000, MNRAS, 315, 543
+
+\bibitem[\protect\citeauthoryear{Hurley, Pols \& Tout}{2002}]{Hurley02}
+Hurley J.~R., Pols O.~R., Tout C.~A., 2002, MNRAS, 329, 897
+
+\bibitem[\protect\citeauthoryear{King}{1966}]{King66} 
+King I.~R., 1966, AJ, 71, 64 
+
+\bibitem[\protect\citeauthoryear{Kobulnicky \& Fryer}{2007}]{Kobulnicky07}
+Kobulnicky H.~A., Fryer C.~L., 2007, ApJ, 670, 747
+
+\bibitem[\protect\citeauthoryear{K{\"o}nyves et al.}{2010}]{Koenyves10} 
+K{\"o}nyves V., et al., 2010, A\&A, 518, L106 
+
+\bibitem[\protect\citeauthoryear{Kroupa}{1995a}]{Kroupa95a}
+Kroupa P., 1995a, MNRAS, 277, 1491
+
+\bibitem[\protect\citeauthoryear{Kroupa}{1995b}]{Kroupa95b}
+Kroupa P., 1995b, MNRAS, 277, 1507
+
+\bibitem[\protect\citeauthoryear{Kroupa}{2001a}]{Kroupa01}
+Kroupa P., 2001a, MNRAS, 322, 231
+
+\bibitem[\protect\citeauthoryear{Kroupa}{2008}]{Kroupa08}
+Kroupa P., 2008, LNP, 760, 181
+
+\bibitem[\protect\citeauthoryear{Kroupa}{2009}]{Kroupa09} 
+Kroupa P., 2009, IAUS, 254, 209 
+
+\bibitem[\protect\citeauthoryear{Kroupa et al.}{2011}]{Kroupa11} 
+Kroupa P., Weidner C., Pflamm-Altenburg J., Thies I., Dabringhausen J., Marks M., Maschberger T., 2011, arXiv:1112.3340
+
+\bibitem[\protect\citeauthoryear{K\"upper, Mieske \& Kroupa}{2011}]{Kuepper11}
+K\"upper A.~H.~W., Mieske S., Kroupa P., 2011, MNRAS, 413, 863
+
+\bibitem[\protect\citeauthoryear{Lauer et al.}{1995}]{Lauer95} 
+Lauer T.~R., et al., 1995, AJ, 110, 2622 
+
+\bibitem[\protect\citeauthoryear{Marks \& Kroupa}{2012}]{Marks12} 
+Marks M., Kroupa P., 2012, A\&A, 543, A8 
+
+\bibitem[\protect\citeauthoryear{Maschberger}{2012}]{Maschberger12} 
+Maschberger T., 2012, MNRAS accepted, arXiv:1212.0939 
+
+\bibitem[\protect\citeauthoryear{Mathieu}{1994}]{Mathieu94}
+Mathieu R.~D., 1994, ARA\&A, 32, 465
+
+\bibitem[\protect\citeauthoryear{Miyamoto \& Nagai}{1975}]{Miyamoto75} 
+Miyamoto M., Nagai R., 1975, PASJ, 27, 533 
+
+\bibitem[\protect\citeauthoryear{Nitadori \& Aarseth}{2012}]{Nitadori12} 
+Nitadori K., Aarseth S.~J., 2012, MNRAS, 424, 545 
+
+\bibitem[\protect\citeauthoryear{Plummer}{1911}]{Plummer11} 
+Plummer H.~C., 1911, MNRAS, 71, 460 
+
+\bibitem[\protect\citeauthoryear{Press, Flannery \& Teukolsky}{1986}]{Press86} 
+Press W.~H., Flannery B.~P., Teukolsky S.~A., 1986, Numerical recipes. The art of scientific computing, Cambridge, UK, Cambridge University Press 
+
+\bibitem[\protect\citeauthoryear{Sana \& Evans}{2011}]{Sana11} 
+Sana H., Evans C.~J., 2011, IAUS, 272, 474 
+
+\bibitem[\protect\citeauthoryear{{\v S}ubr, Kroupa, \& Baumgardt}{2008}]{Subr08} 
+{\v S}ubr L., Kroupa P., Baumgardt H., 2008, MNRAS, 385, 1673
+
+\bibitem[\protect\citeauthoryear{Weidner \& Kroupa}{2006}]{Weidner06} 
+Weidner C., Kroupa P., 2006, MNRAS, 365, 1333
+
+\end{thebibliography}
+                                                                           
+
+
+
+
+\end{document}
