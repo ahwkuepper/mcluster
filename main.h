@@ -14,6 +14,18 @@
 #define min(a,b)         (a < b) ?  (a) : (b)
 #define Lifetime(Mstar)  1.13E4*pow(Mstar,-3)+0.6E2*pow(Mstar,-0.75)+1.2 //Myr	[Prantzos 2007]
 
+
+//MW potential consisting of bulge, disk & NFW halo - constants:
+//based on Law, Majewski & Johnston (2009)
+#define b1_LMJ 0.7000;       //[kpc]
+#define M1_LMJ 3.4e10;       //[solar masses]
+#define a2_LMJ 6.5000;       //[kpc]
+#define b2_LMJ 0.2600;        //[kpc]
+#define M2_LMJ 1.0e11;       //[solar masses]
+#define R_NFW 42.9647;       //[kpc]
+#define M_NFW 9.832538e+11;  //[solar masses]
+#define q_halo 1.0;          //[dimensionless]
+
 //Allen & Santillan (1991) MW potential - constants:
 #define b1allen 0.3873            //kpc
 #define M1allen 606.0*2.32e07    //solar masses
@@ -26,6 +38,7 @@
 //Additional parameters for Sverre's MW potential
 #define VCIRC 220.0			//circular velocity at RCIRC
 #define RCIRC 8.500			//kpc
+
 //new input parameters for bulge potential
 #define GMB 0.0				//Central bulge mass (Msun).
 #define AR 1.0				//Scale radius in gamma/eta model (kpc, Dehnen 1993).

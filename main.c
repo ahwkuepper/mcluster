@@ -72,7 +72,7 @@ int main (int argv, char **argc) {
 	double a = 1.0;					//Scale radius of EFF/Nuker template (profile = 3) [pc]
 	double Rmax = 100.0;			//Cut-off radius for EFF/Nuker template (profile = 3) [pc]
 	double tcrit = 100.0;			//Simulation time [N-body units (Myr in Nbody6 custom)]
-	int tf = 3;						//Tidal field: =0 no tidal field, =1 Near-field approximation, =2 point-mass galaxy, =3 Allen & Santillan (1991) MW potential (or Sverre's version of it)
+	int tf = 3;						//Tidal field: =0 no tidal field, =1 Near-field approximation, =2 point-mass galaxy, =3 Central point mass, disk & log-halo
 	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 	
@@ -577,7 +577,7 @@ int main (int argv, char **argc) {
 	
 	//evaluate approximate tidal radius assuming circular orbit
 	if (tf == 3) {
-		//in the case of Allen & Santillan potential, assume kappa = 1.4omega (eq. 9 in Kuepper et al. 2010)
+		//in the case of log-halo potential, assume kappa = 1.4omega (eq. 9 in Kuepper et al. 2010)
 		omega = sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2])/sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
 		rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
 	} else if (!tf) {
@@ -4514,6 +4514,8 @@ int output1(char *output, int N, double dtadj, double dtout, double tcrit, doubl
 
 int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
+    double GMG_temp, DISK_temp, A_temp, B_temp, VCIRC_temp, RCIRC_temp, GMB_temp, AR_temp, GAM_temp, ZDUM1_temp, ZDUM2_temp, ZDUM3_temp, ZDUM4_temp;
+    
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
 	FILE *PAR, *NBODY, *SSE12;
@@ -4543,17 +4545,28 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
 	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
 	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
-//	if (tf == 1) {
-//		rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-//		fprintf(PAR,"%i %.8f\n",0,sqrt(1.0/(3.0*pow(rtide,3))));
+
 	if (tf == 2) {
 		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
 	} else if (tf == 3) {
-		//fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-		//new version including bulge potential:
-		fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen, GMB, AR, GAM);
+		//new version including Hernquist bulge potential + NFW:
+        GMG_temp = 0.0;        //mass of central point-mass
+        DISK_temp = M2_LMJ;    //mass of Myamoto disk
+        A_temp = a2_LMJ;       //scale length of Myamoto disk
+        B_temp = b2_LMJ;       //scale height of Myamoto disk
+        VCIRC_temp = 0.0;      //desired circular velocity at RCIRC_t for logarighmic potential
+        RCIRC_temp = 0.0;        //radius at which circular velocity shall be VCIRC_t
+        GMB_temp = M1_LMJ;     //bulge mass
+        AR_temp = b1_LMJ;      //bulge scale radius
+        GAM_temp = 2.0;        //bulge profile slope (2 = Hernquist bulge)
+        ZDUM1_temp = 0.0;      //smoothing length for central point mass
+        ZDUM2_temp = M_NFW;    //characteristic mass of NFW halo (~M(<5.3*ZDUM3_t))
+        ZDUM3_temp = R_NFW;    //scale radius of NFW profile
+        ZDUM4_temp = q_halo;   //flattening of NFW or logarithmic halo potential along z-axis
+		fprintf(PAR,"%.8e %.8e %.6f %.6f %.6f %.6f %.8e %.6f %.6f %.6f %.8e %.8e %.6f\n", GMG_temp, DISK_temp, A_temp, B_temp, VCIRC_temp, RCIRC_temp, GMB_temp, AR_temp, GAM_temp, ZDUM1_temp, ZDUM2_temp, ZDUM3_temp, ZDUM4_temp);
 		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
 	}
+
 	if (tf > 2) fprintf(PAR,"%.2f %.2f %.2f %.2f\n",extmass,extrad,extdecay,extstart);
 	
 	

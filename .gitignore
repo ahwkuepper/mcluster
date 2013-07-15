@@ -4,3 +4,9 @@ mcluster
 mcluster_sse
 .DS_Store
 #*
+*.tar
+*.gz
+website/
+stuff/
+papers/
+testing/
