@@ -3182,7 +3182,8 @@ double fractalize(double D, int N, double **star, int radial, int symmetry) {
 	star_temp[Nparent][6] = 0.0;//vz
 	Nparent++;
 	
-	
+	i=0;
+    
 	while (Nparent+i*8<Ntot) {
 		l /= 2.0;
 		i = 0;
