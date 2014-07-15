@@ -1095,7 +1095,7 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
-		vesc = sqrt(2.0*0.4**N/Rh);
+		vesc = sqrt(2.0*G*0.4**N/Rh);
 		printf("Estimated escape velocity of cluster assuming mean stellar mass of 0.4 Msun = %.4f km/s\n", vesc);
 	}
 	for (i=0; i<20; i++) zpars[i] = 0;
@@ -1234,7 +1234,7 @@ int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, d
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
-		vesc = sqrt(2.0*0.4**N/Rh);
+		vesc = sqrt(2.0*G*0.4**N/Rh);
 		printf("Estimated escape velocity of cluster assuming mean stellar mass of 0.4 Msun = %.4f km/s\n", vesc);
 	}
 	
@@ -1484,7 +1484,7 @@ int generate_m4(int *N, double **star, double alpha, double beta, double mu,  do
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
-		vesc = sqrt(2.0*0.4**N/Rh);
+		vesc = sqrt(2.0*G*0.4**N/Rh);
 		printf("Estimated escape velocity of cluster assuming mean stellar mass of 0.4 Msun = %.4f km/s\n", vesc);
 	}
 	for (i=0; i<20; i++) zpars[i] = 0;
@@ -4417,7 +4417,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
 	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 3 4 0 1\n",bin,esc);
+	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 1\n",bin,esc);
 	fprintf(PAR,"0 0 0 2 1 0 2 0 0 3\n");
 	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
 	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
@@ -4540,7 +4540,7 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
 	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 3 4 0 1\n",bin, esc);
+	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 1\n",bin, esc);
 	fprintf(PAR,"0 0 0 2 1 0 2 0 0 3\n");
 	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
 	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
