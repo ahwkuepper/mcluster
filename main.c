@@ -3038,7 +3038,7 @@ double kernel (double x, double *p) {
 
 double rhoR (double x, double *p) {	//user-defined 2d-density profile
 	//	return p[1]*pow(1.0+x/p[2]*x/p[2],-0.5*p[3]); //Elson, Fall & Freeman (1987)
-	return p[1]*pow(2.0,0.5*(p[3]-p[4]))*pow(x/p[2],-p[4])*pow(1.0+pow(x/p[2],p[5]),-(p[3]-p[4])/p[5]); //Nuker (Lauer et al. 1995) -> Elson, Fall & Freeman (1987) for p[4] = 0 & p[5] = 2
+	return p[1]*pow(2.0,(p[3]-p[4])/p[5])*pow(x/p[2],-p[4])*pow(1.0+pow(x/p[2],p[5]),-(p[3]-p[4])/p[5]); //Nuker (Lauer et al. 1995) -> Elson, Fall & Freeman (1987) for p[4] = 0 & p[5] = 2
 	
 }
 
