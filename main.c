@@ -215,7 +215,7 @@ int main (int argv, char **argc) {
 			if (mn < MAX_MN) { 
 				mlim[mn] = atof(optarg);
 				if (mn == 0) mlow = atof(optarg);
-				if (mn == 1) mup = atof(optarg);
+				else mup = atof(optarg);
 				mn++; 
 				break;
 			} else { printf("\nError: Number of mass params exceded maximum limit of %d\n", MAX_MN); return 1; }
