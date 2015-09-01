@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2009 by Andreas H.W. Kuepper                            *
- *   akuepper@astro.uni-bonn.de                                            *
+ *   Copyright (C) 2009-2015 by Andreas H.W. Kuepper                       *
+ *   ahwkuepper@gmail.com                                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 /***************************************************************************
- *   Compile using the command: cc -lm -o mcluster mcluster.c              *
+ *   Compile using the command: cc -o mcluster mcluster.c -lm              *
  *   or use the Makefile, i.e. type: make mcluster or make mcluster_sse    *
  ***************************************************************************/
 /***************************************************************************
