@@ -27,11 +27,11 @@ OBJECTS = $(SOURCE:.f=.o)
 
 mcluster_sse: $(OBJECTS) $(LFLAGS)
 	$(CC) -c main.c -D SSE -lm
-	$(CC) $(CFLAGS) $(OBJECTS) main.o -o mcluster_sse -lm 
+	$(CC) $(OBJECTS) main.o -o mcluster_sse -lm $(CFLAGS) 
 
 mcluster_gpu: $(OBJECTS) $(LFLAGS) gpupot.gpu.o main.c
 	$(CC) -c main.c -D SSE -D GPU -lm -I$(CUDA_PATH)/include
-	$(CC) $(CFLAGS) $(OBJECTS) main.o gpupot.gpu.o -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -o mcluster_gpu -lm
+	$(CC) $(OBJECTS) main.o gpupot.gpu.o  -o mcluster_gpu -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -lm $(CFLAGS) 
 
 mcluster: 
 	$(CC) -o mcluster main.c -lm
