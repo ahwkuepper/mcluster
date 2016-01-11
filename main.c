@@ -4829,7 +4829,7 @@ int output3(char *output, int N, double rvir, double rh, double mmean, double M,
 		}
 #endif
 
-        vscale = sqrt(1.0+gaspot/epot);
+        vscale = sqrt(1.0+0.5*gaspot/epot);
         
         for (j=0; j<N; j++) {
             star[j][4] *= vscale;
