@@ -587,7 +587,7 @@ int main (int argv, char **argc) {
 		rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
 	} else if (!tf) {
 		rtide = 1.0E5;
-	} else if ((tf == 1) && (code == 0 || code == 5)) {
+	} else if ((tf == 1) && (code == 0 || code == 4 || code == 5)) {
 		//in case of Sverre's Nbody6 standard tidal field
 		rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*8000.0;
 	} else { 
@@ -4500,7 +4500,7 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 	
 	
 	//estimate NNBMAX and RS0 (Nbody6 only)
-	if ((code == 0) || (code == 2) || (code == 5)) {
+	if ((code == 0) || (code == 2) || code == 4 || (code == 5)) {
 		*NNBMAX = 2.0*sqrt(N);
 		if (*NNBMAX < 30) *NNBMAX = 30;
 		if (N<=*NNBMAX) *NNBMAX = 0.5*N;
@@ -4906,9 +4906,6 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	}
 	if (tf > 2)	fprintf(PAR,"%.6f %.6f %.6f %.6f\n",extmass,extrad,extdecay,extstart);
 	fprintf(PAR,"10000.0 2 0\n");
-	fprintf(PAR,"10000.0 2 0\n");
-	
-	
 	
 	//write to .fort.10 file
 	int j;
@@ -4934,7 +4931,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	}
 	
 	return 0;
-	
+    
 }
 
 int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
