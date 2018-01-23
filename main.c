@@ -1011,6 +1011,7 @@ int main (int argv, char **argc) {
 	if (extrad) extrad /= rvir;
 	if (extdecay) extdecay = 1.0/(extdecay/tscale);
 	if (extstart) extstart = extstart/tscale;
+    tcrit /= 14.9369019058*sqrt(rvir*rvir*rvir/M);
 
 	
 	
@@ -4840,17 +4841,22 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
+    double gmin = 1e-6;
+    double ecrit = N>1e6?1e-6:1.0/N;
+    double vs = 0.25/N;
+    double rmin = pow(gmin/N,0.33333);
+    double dtmin = pow(rmin,1.5);
 	
 	//write to .PAR file	
 	fprintf(PAR,"1 5000000.0 0\n");
 	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.8f %.8f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
 	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
 	fprintf(PAR,"-1 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
 	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 -1\n",bin,esc);
 	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
 	fprintf(PAR,"0 1 0 1 0 0 0 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
+	fprintf(PAR,"%f %f 0.2 1.0 %f 0.001\n", dtmin, rmin, gmin);
 	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
 	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
 	if (tf == 2) {
@@ -4913,18 +4919,22 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
-	
+    double gmin = 1e-6;
+    double ecrit = N>1e6?1e-6:1.0/N;
+    double vs = 0.25/N;
+    double rmin = pow(gmin/N,0.33333);
+    double dtmin = pow(rmin,1.5);
 	
 	//write to .PAR file	
 	fprintf(PAR,"1 5000000.0 5000000.0 40 40 0\n");
 	fprintf(PAR,"%i 1 10 %i %i 1 10\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-04 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.8f %.8f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
 	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
 	fprintf(PAR,"0 6 %i 0 1 2 1 0 0 1\n", esc);
 	fprintf(PAR,"1 0 3 2 1 0 0 2 0 0\n");
 	fprintf(PAR,"0 0 0 0 0 2 -3 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001 0.125\n");
+	fprintf(PAR,"%f %f 0.2 1.0 %f 0.001 0.125\n",dtmin, rmin, gmin);
 	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
 	fprintf(PAR,"%.2f 0.0 0.0 0.00000\n",Q);
 //	if (tf == 1) {
@@ -5063,7 +5073,8 @@ void help(double msort) {
 	printf("                   template (outer slope, inner slope, transition)   \n");
 	printf("       -S <0.0-1.0> (degree of mass segregation; 0.0= no segregation)\n");
 	printf("       -D <1.6-3.0> (fractal dimension; 3.0= no fractality)          \n");
-	printf("       -T <value> (tcrit in N-body units)                            \n");
+	printf("       -T <value> (tcrit in N-body units,                            \n");
+	printf("                   in Myr if stellar evolution is on)                \n");
 	printf("       -Q <value> (virial ratio)                                     \n");
 	printf("       -C <0|1|3|5> (code; 0= Nbody6, 1= Nbody4, 3= table of stars, 5= Nbody6++)    \n");
 	printf("       -A <value> (dtadj in N-body units)                            \n");
