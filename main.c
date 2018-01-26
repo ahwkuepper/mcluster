@@ -242,7 +242,14 @@ int main (int argv, char **argc) {
 		case '?':	help(msort); return 1;
 	};
 
-    if (mn-1 > 0) mup = mlim[mn-1];
+        if (mn-1 > 0) mup = mlim[mn-1];
+
+	if (seed) srand48(seed);				//initialize random number generator by seed
+	else {
+		seed = (unsigned) time(NULL);	//initialize random number generator by local time
+		seed %= 100000;
+		srand48(seed);
+	}
 
 	//print summary of input parameters to .info file
 	info(output, N, Mcl, profile, W0, S, D, Q, Rh, gamma, a, Rmax, tcrit, tf, RG, VG, mfunc, single_mass, mlow, mup, alpha, mlim, alpha_L3, beta_L3, mu_L3, weidner, mloss, remnant, epoch, Z, prantzos, nbin, fbin, pairing, msort, adis, amin, amax, eigen, BSE, extmass, extrad, extdecay, extstart, code, seed, dtadj, dtout, dtplot, gpu, regupdate, etaupdate, esc, units, match, symmetry, OBperiods);
@@ -268,12 +275,6 @@ int main (int argv, char **argc) {
 	}
 #endif
   
-	if (seed) srand48(seed);				//initialize random number generator by seed
-	else {
-		seed = (unsigned) time(NULL);	//initialize random number generator by local time
-		seed %= 100000;
-		srand48(seed);
-	}
 	printf ("\n\nRandom seed = %i\n\n\n", seed);
 	if (seed) value3_.idum = seed;			//idum is the random number seed used in the kick routine. 
 	else value3_.idum = 10000000.0*drand48();
