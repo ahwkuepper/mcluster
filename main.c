@@ -4604,17 +4604,17 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char *PARfile, *NBODYfile, *SSEfile;
 	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.input",output);
+	PARfile = strcat(output,".input");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.fort.10",output);
+	NBODYfile = strcat(output,".fort.10");
 	NBODY = fopen(NBODYfile,"w");
 
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
 	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
+		SSEfile = strcat(output,".fort.12");
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
@@ -4676,11 +4676,11 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 int output1(char *output, int N, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50];		
+	char *PARfile, *NBODYfile;
 	FILE *PAR, *NBODY;
-	sprintf(PARfile, "%s.PAR",output);
+	PARfile = strcat(output,".PAR");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
+	NBODYfile = strcat(output,".NBODY");
 	NBODY = fopen(NBODYfile,"w");
 	
 	//write to .PAR file	
@@ -4724,17 +4724,17 @@ int output1(char *output, int N, double dtadj, double dtout, double tcrit, doubl
 int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char *PARfile, *NBODYfile, *SSEfile;		
 	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.PAR",output);
+	PARfile = strcat(output,".PAR");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
+	NBODYfile = strcat(output,".NBODY");
 	NBODY = fopen(NBODYfile,"w");
 	
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
 	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
+		SSEfile = strcat(output,".fort.12");
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
