@@ -241,6 +241,11 @@ int main (int argv, char **argc) {
 		case 'h':	help(msort); return 1;
 		case '?':	help(msort); return 1;
 	};
+	// some parameters ought to be checked for validity
+	if (S<0 || S>1) {
+	  printf("Bad value of S=%g\n",S);
+	  exit(1);
+	}
 
         if (mn-1 > 0) mup = mlim[mn-1];
 
