@@ -4790,11 +4790,10 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 int output3(char *output, int N, double rvir, double rh, double mmean, double M, double epoch, double Z, double *RG, double *VG, double rtide, double **star, double Rgal, double extmass, double extrad){
 	//Open output files
-	char tablefile[20];		
+	char *tablefile = strcat(output,".txt");
 	FILE *TABLE;
-	sprintf(tablefile, "%s.txt",output);
-	TABLE = fopen(tablefile,"w");
 	
+	TABLE = fopen(tablefile,"w");
 	
 	//write to .txt file
 	int i, j;
