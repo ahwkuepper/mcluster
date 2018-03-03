@@ -103,15 +103,15 @@ int main (int argv, char **argc) {
 	double fbin = 0.0;				//Primordial binary fraction, number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
 	int pairing = 3;				//Pairing of binary components; 0= random pairing, 1= ordered pairing for components with masses M>msort, 2= random but separate pairing for components with masses m>Msort; 3= Uniform distribution of mass ratio (0.1<q<1.0) for m>Msort and random pairing for remaining (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014; implemented by Long Wang)
 	double msort = 5.0;				//Stars with masses > msort will be sorted and preferentially paired into binaries if pairing = 1
-	int adis = 3;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution for M<Msort; based on Sana et al. (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
-	int OBperiods = 1;				//Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011) if OBperiods = 1
+	int adis = 3;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution 
+	int OBperiods = 2;				//1: Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011); 2: based on Sana et al. (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
 	double amin = 0.0001;			//Minimum semi-major axis for adis = 0 [pc]
 	double amax = 0.01;				//Maximum semi-major axis for adis = 0 [pc]
 #ifdef SSE
 	int eigen = 0;					//Use Kroupa (1995) eigenevolution for pre-main sequence short-period binaries; =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
 	int BSE = 1;					//Apply binary star evolution using BSE (Hurley, Tout & Pols 2002) =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
 #else
-	int eigen = 1;					//Use Kroupa (1995) eigenevolution for pre-main sequence short-period binaries; =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
+	int eigen = 2;					// 1. Use Kroupa (1995) eigenevolution for pre-main sequence short-period binaries; 2. Use modified eigenevolution from Belloni et al. (2017); 0. Off
 	int BSE = 0;					//Apply binary star evolution using BSE (Hurley, Tout & Pols 2002) [needs special compiling and BSE]; =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
 #endif
 	
@@ -3491,8 +3491,8 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 		
 			//Specify semi-major axis
 			if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
-			  if (adis == 3) {
-			        double lPmin = 0.15, alpha = 0.45; //Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)
+			  if (OBperiods==2) {
+		        double lPmin = 0.15, alpha = 0.45; //Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)
 				double ralpha = 1/alpha, eta = alpha/0.23;
 				lP = pow(pow(lPmin,alpha) + eta*drand48(),ralpha);
 			  } else {
@@ -3562,7 +3562,7 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 
 
             if (!i && OBperiods && msort) {
-			  if (adis == 3) {
+			  if (OBperiods==2) {
 			    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution.\n",msort);
 			  }  else {
 			    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana & Evans (2011) period distribution.\n",msort);
@@ -3571,20 +3571,35 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 
 		
 			//Specify eccentricity distribution
-			if (!i && OBperiods && msort) printf("\nApplying thermal eccentricity distribution for low-mass systems and Sana & Evans (2011) eccentricity distribution for high-mass systems.\n");
+			if (!i && OBperiods && msort) {
+                if (OBperiods==1) {
+                    printf("\nApplying thermal eccentricity distribution for low-mass systems and Sana & Evans (2011) eccentricity distribution for high-mass systems.\n");
+                } else {
+                    printf("\nApplying thermal eccentricity distribution for low-mass systems and Sana et al. (2012), Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) eccentricity distribution for high-mass systems.\n");
+                }
+
+            }
 			else if (!i) printf("\nApplying thermal eccentricity distribution.\n");	
 				
 			if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
-				double k1, k2;
-				double elim = 0.8; //maximum eccentricity for high-mass binaries
-				double fcirc = 0.3; //fraction of circular orbits among high-mass binaries
-				k2 = (fcirc*exp(0.5*elim)-1.0)/(exp(0.5*elim)-1.0);
-				k1 = fcirc-k2;
-				ecc = drand48();
-				if (ecc < fcirc) ecc = 0.0;
-				else {
-					ecc = 2.0*log((ecc-k2)/k1);
-				}
+                if (OBperiods==1) {
+                    double k1, k2;
+                    double elim = 0.8; //maximum eccentricity for high-mass binaries
+                    double fcirc = 0.3; //fraction of circular orbits among high-mass binaries
+                    k2 = (fcirc*exp(0.5*elim)-1.0)/(exp(0.5*elim)-1.0);
+                    k1 = fcirc-k2;
+                    ecc = drand48();
+                    if (ecc < fcirc) ecc = 0.0;
+                    else {
+                        ecc = 2.0*log((ecc-k2)/k1);
+                    }
+                }
+                else if (OBperiods==2){
+                    double elimit = 1.0 - pow((P*365.25/2),-2.0/3.0);
+                    do{
+                        ecc = pow(drand48(), 1.0/0.55); // f=0.55ecc^(-0.45)
+                    }while(ecc>elimit);
+                }
 			} else {
 				ecc = sqrt(drand48());   // Thermal distribution f(e)=2e 				
 			}
@@ -3603,8 +3618,8 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 				m2*=M;
 				abin*=rvir;
 				if (!(OBperiods && ((m1>=msort) || (m2>=msort)))) {
-					if (m1>=m2) eigenevolution(&m1, &m2, &ecc, &abin);
-					else  eigenevolution(&m2, &m1, &ecc, &abin);
+					if (m1>=m2) eigenevolution(&m1, &m2, &ecc, &abin, eigen);
+					else  eigenevolution(&m2, &m1, &ecc, &abin, eigen);
 				}
 				m1/=M;
 				m2/=M;
@@ -4317,8 +4332,16 @@ double rtnewt (double ecc, double ma) {
 	exit(-1); 
 }
 
-int eigenevolution(double *m1, double *m2, double *ecc, double *abin){
+int eigenevolution(double *m1, double *m2, double *ecc, double *abin, int opt){
+    if(*m1<*m2) {
+        double mtmp = *m2;
+        *m2 = *m1;
+        *m1 = mtmp;
+    }
 	double alpha = 28.0;
+    double eta=0.25;
+    double m1crit = 1.0;
+    if(opt==2) alpha *= pow(*m1,eta);
 	double beta = 0.75;
 	double mtot,lper,lperi,ecci,mtoti,r0,rperi,qold,qnew;
 	
@@ -4333,23 +4356,26 @@ int eigenevolution(double *m1, double *m2, double *ecc, double *abin){
 	/* Circularisation */
 	r0 = alpha*RSUN;
 	rperi = *abin*(1.0-*ecc);
-	alpha = -pow((r0/rperi),beta);
+	alpha = -pow((r0/rperi),beta); // alpha -> rho
 	
 	if (*ecc > 0) {
 		*ecc = exp(alpha+log(*ecc));
 	}
 	
 	/* pre-ms mass-transfer */
-	qold = *m1/ *m2;
-	if (qold > 1.0) qold = 1.0/qold;
+	//qold = *m1/ *m2;
+	//if (qold > 1.0) qold = 1.0/qold;
+    qold = *m2 / *m1;
 	alpha = -alpha;
+    if (opt==2&&*m1<m1crit) alpha *= 0.5;
 	if (alpha > 1.0) {
-		qnew = 1.0;
+        if(opt==2&&*m1<m1crit) qnew = 0.9 + 0.1*drand48();
+		else qnew = 1.0;
 	} else {
 		qnew = qold + (1.0-qold)*alpha;
 	}
 	
-	*m1 = max(*m1,*m2);
+	//*m1 = max(*m1,*m2);
 	*m2 = qnew * *m1;
 	
 	mtot = *m1 + *m2;
