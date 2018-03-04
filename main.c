@@ -101,10 +101,10 @@ int main (int argv, char **argc) {
 	//Binary parameters
 	int nbin = 0;				    //Number of primordial binary systems
 	double fbin = 0.0;				//Primordial binary fraction, number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
-	int pairing = 3;				//Pairing of binary components; 0= random pairing, 1= ordered pairing for components with masses M>msort, 2= random but separate pairing for components with masses m>Msort; 3= Uniform distribution of mass ratio (0.1<q<1.0) for m>Msort and random pairing for remaining (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014; implemented by Long Wang)
+	int pairing = 3;				//Pairing of binary components; 0= random pairing, 1= ordered pairing for components with masses M>msort, 2= random but separate pairing for components with masses m>Msort; 3= Use period distribution for M>msort from Sana et al. (2011,2012) and Oh et al. (2015).
 	double msort = 5.0;				//Stars with masses > msort will be sorted and preferentially paired into binaries if pairing = 1
 	int adis = 3;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution 
-	int OBperiods = 2;				//1: Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011); 2: based on Sana et al. (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
+	int OBperiods = 2;				//1: Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011); 2: Uniform distribution of mass ratio (0.1<q<1.0) for m>Msort and random pairing for remaining (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014; Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
 	double amin = 0.0001;			//Minimum semi-major axis for adis = 0 [pc]
 	double amax = 0.01;				//Maximum semi-major axis for adis = 0 [pc]
 #ifdef SSE
@@ -500,7 +500,7 @@ int main (int argv, char **argc) {
 		if (pairing) {
 			if (pairing == 1) printf("\nApplying ordered pairing for stars with masses > %.1f Msun.\n",msort);
 			else if (pairing == 2) printf("\nApplying random pairing for stars with masses > %.1f Msun.\n",msort);
-			else if (pairing == 3) printf("\nApplying uniform mass ratio distribution for stars with masses > %.1f Msun.\n",msort);
+			else if (pairing == 3) printf("\nApplying Sana et al. (2012) mass atio distribution for stars with masses > %.1f Msun.\n",msort);
 			order(star, N, M, msort, pairing);
 		} else {
 			randomize(star, N);
@@ -3595,7 +3595,8 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
                     }
                 }
                 else if (OBperiods==2){
-                    double elimit = 1.0 - pow((P*365.25/2),-2.0/3.0);
+                    double Pmin=pow(10.0,0.15); // consistent with Sana et al. (2012)
+                    double elimit = 1.0 - pow((P*365.25/Pmin),-2.0/3.0);
                     do{
                         ecc = pow(drand48(), 1.0/0.55); // f=0.55ecc^(-0.45)
                     }while(ecc>elimit);
@@ -5158,7 +5159,9 @@ void help(double msort) {
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");
 	printf("       -p <0|1|2|3> (binary pairing, 0= random, 1= ordered for M>%.1f Msun,\n",msort);
 	printf("                   2= random but separate pairing for M>%.1f Msun)\n",msort);
-	printf("                   3= random but uniform distribution of mass ratio (0.1<q<1.0) for M>%.1f Msun)\n",msort);
+	printf("                   3= random but use period distribution from Sana et al., (2012);\n");
+    printf("                      Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)\n");
+    printf("                      for M>%.1f Msun)\n",msort);
 	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
 	printf("       -t <0|1|2|3> (tidal field; 0= no tidal field, 1= near-field,  \n");
 	printf("                    2= point-mass, 3= Milky-Way potential)           \n");
