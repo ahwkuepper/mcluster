@@ -3904,6 +3904,25 @@ int order(double **star, int N, double M, double msort, int pairing){
             // Find the second one based on uniform mass ratio
             if (i<N-1) {
               double mpair = (drand48()*0.9+0.1)*masses[i][0];
+              // second index
+              int k = -1;
+              // find closest one
+              int k1 = i+1;
+              while (k1<N&&mask[k1]==1) k1++;
+              if (k1<N) {
+                  double mk = abs(masses[k1][0]-mpair);
+                  double dm = mk;
+                  int k2 = k1;
+                  do {
+                      k1=k2;
+                      k2++;
+                      while (k2<N && mask[k2]==1) k2++;
+                      if(k2<N) dm = abs(masses[k2][0]-mpair);
+                      else dm=mk;
+                  } while(dm<mk);
+                  k = k1;
+              }
+/*
               int k = i+1;
               while (masses[k][0] > mpair) {
                 k++;
@@ -3929,6 +3948,7 @@ int order(double **star, int N, double M, double msort, int pairing){
                   else k = k1;
                 }
               }
+*/
               if (k>0) {
                 if(j>=N) {
                   perror("\n Error!: Pairing binary star exceed the maximum index!\n");
