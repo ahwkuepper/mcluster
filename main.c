@@ -3910,18 +3910,20 @@ int order(double **star, int N, double M, double msort, int pairing){
               int k1 = i+1;
               while (k1<N&&mask[k1]==1) k1++;
               if (k1<N) {
-                  double mk = abs(masses[k1][0]-mpair);
+                  double mk = fabs(masses[k1][0]-mpair);
                   double dm = mk;
                   int k2 = k1;
                   do {
-                      k1=k2;
+                      k1 = k2;
+                      mk = dm;
                       k2++;
                       while (k2<N && mask[k2]==1) k2++;
-                      if(k2<N) dm = abs(masses[k2][0]-mpair);
+                      if(k2<N) dm = fabs(masses[k2][0]-mpair);
                       else dm=mk;
                   } while(dm<mk);
                   k = k1;
               }
+              //printf("mpair =%f, k=%d, i=%d, mass[k]=%f\n",mpair,k,i,masses[k][0]);
 /*
               int k = i+1;
               while (masses[k][0] > mpair) {
@@ -3981,6 +3983,7 @@ int order(double **star, int N, double M, double msort, int pairing){
             // Store index for remaining stars
             mmrand[ileft][0] = drand48();
             mmrand[ileft][1] = masses[i][1];
+            mask[i] = 1;
             ileft++;
           }
         }
