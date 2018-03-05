@@ -3922,6 +3922,9 @@ int order(double **star, int N, double M, double msort, int pairing){
                       else dm=mk;
                   } while(dm<mk);
                   k = k1;
+                  //printf("mass_ratio(true,real): %f %f\n",mpair/masses[i][0], masses[k][0]/masses[i][0]);
+                  if(dm/mpair>1e-2) 
+                      printf("Warning: dm too large: m1=%F, mp=%f, m2=%f, dm=%f, i=%d, k=%d\n",masses[i][0],mpair,masses[k][0],i,k);
               }
               //printf("mpair =%f, k=%d, i=%d, mass[k]=%f\n",mpair,k,i,masses[k][0]);
 /*
