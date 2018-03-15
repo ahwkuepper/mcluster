@@ -29,9 +29,13 @@ mcluster_sse: $(OBJECTS) $(LFLAGS)
 	$(CC) -c main.c -D SSE -lm
 	$(CC) $(OBJECTS) main.o -o mcluster_sse -lm $(CFLAGS) 
 
-mcluster_gpu: $(OBJECTS) $(LFLAGS) gpupot.gpu.o main.c
+mcluster_ssegpu: $(OBJECTS) $(LFLAGS) gpupot.gpu.o main.c
 	$(CC) -c main.c -D SSE -D GPU -lm -I$(CUDA_PATH)/include
 	$(CC) $(OBJECTS) main.o gpupot.gpu.o  -o mcluster_gpu -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -lm $(CFLAGS) 
+
+mcluster_gpu: gpupot.gpu.o main.c
+	$(CC) -c main.c -D GPU -I$(CUDA_PATH)/include
+	$(CC) main.o gpupot.gpu.o -o mcluster_gpu -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -lm
 
 mcluster: 
 	$(CC) -o mcluster main.c -lm
