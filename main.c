@@ -4905,6 +4905,8 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.dat.10",output);
 	NBODY = fopen(NBODYfile,"w");
+    double ecrit = 1.0/(N+0.0);
+    if (ecrit<1e-6) ecrit = 1e-6;
 	
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
@@ -4918,7 +4920,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .PAR file	
 	fprintf(PAR,"1 5000000.0 5000000.0 40 40 0\n");
 	fprintf(PAR,"%i 1 10 %i %i 1 10\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-04 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.8f %.8f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
 	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
 	fprintf(PAR,"0 6 %i 0 1 2 1 0 0 1\n", esc);
