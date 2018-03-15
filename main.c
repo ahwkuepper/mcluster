@@ -5003,8 +5003,6 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.dat.10",output);
 	NBODY = fopen(NBODYfile,"w");
-    double ecrit = 1.0/(N+0.0);
-    if (ecrit<1e-6) ecrit = 1e-6;
 	
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
