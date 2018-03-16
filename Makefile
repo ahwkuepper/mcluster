@@ -1,43 +1,39 @@
-IGNORE:
+# Compiler
 FC = gfortran -O2 #-ffast-math
 #FC = gfortran-mp-4.4 -O2 #-ffast-math
 #use of -ffast-math may cause problems on some machines
 
-LFLAGS = const_bse.h zdata.h 
+INCPATH=include
 
-CC = gcc -O2 -fopenmp -Wall #-ffast-math 
+CC = gcc -O2 -fopenmp -Wall #-ffast-math
 #use "-D NOOMP" and remove "-fopenmp" for compilation without OpenMP
 
-#CFLAGS = -L/opt/local/lib/gcc44/ -lgfortran
 CFLAGS = -L/usr/lib/ -lgfortran
-CUFLAGS= -O3 -D WITH_CUDA5
-CUDA_PATH = /usr/local/cuda
+CUFLAGS= -O3 -D WITH_CUDA5 -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -lm $(CFLAGS)
+CUDA_PATH = $(shell which nvcc | rev | cut -d'/' -f3- | rev)
 SDK_PATH=$(CUDA_PATH)/samples
 
-.f.o:
-	$(FC) -c $<
+SOURCES := $(shell find . -type f -name '*.f')
+INCLUDES := $(shell find . -type f -name '*.h')
+OBJECTS := $(SOURCES:.f=.o)
 
-SOURCE = \
-deltat.f evolv1.f hrdiag.f kick.f mlwind.f mrenv.f \
-ran3.f star.f zcnsts.f zfuncs.f\
-comenv.f corerd.f dgcore.f evolv2.f gntage.f \
-instar.f mix.f rl.f
+%.o:%.f
+	$(FC) -c $^ -o $@
 
-OBJECTS = $(SOURCE:.f=.o)
-
-mcluster_sse: $(OBJECTS) $(LFLAGS)
+mcluster_sse: $(OBJECTS)
 	$(CC) -c main.c -D SSE -lm
-	$(CC) $(OBJECTS) main.o -o mcluster_sse -lm $(CFLAGS) 
+	$(CC) $(OBJECTS) main.o -o mcluster_sse -lm $(CFLAGS)
 
-mcluster_gpu: $(OBJECTS) $(LFLAGS) gpupot.gpu.o main.c
+mcluster_gpu: $(OBJECTS) $(INCPATH)/gpupot.gpu.o
 	$(CC) -c main.c -D SSE -D GPU -lm -I$(CUDA_PATH)/include
-	$(CC) $(OBJECTS) main.o gpupot.gpu.o  -o mcluster_gpu -L$(CUDA_PATH)/lib64 -lcudart -lstdc++ -lm $(CFLAGS) 
+	$(CC) $(OBJECTS) main.o gpupot.gpu.o  -o mcluster_gpu $(CUFLAGS)
 
-mcluster: 
+mcluster:
+	@echo $(OBJECTS)
 	$(CC) -o mcluster main.c -lm
 
-gpupot.gpu.o: gpupot.gpu.cu cuda_pointer.h
-	nvcc -c $(CUFLAGS) -Xcompiler "-fPIC -O3 -Wall" -I$(SDK_PATH)/common/inc -I. gpupot.gpu.cu 
+$(INCPATH)/gpupot.gpu.o: $(INCPATH)/gpupot.gpu.cu $(INCPATH)/cuda_pointer.h
+	nvcc -c $(CUFLAGS) -Xcompiler "-fPIC -O3 -Wall" -I$(SDK_PATH)/common/inc -I$(INCPATH) $(INCPATH)/gpupot.gpu.cu
 
 clean:
-	rm -f *.o mcluster_sse mcluster mcluster_gpu
+	rm -f $(INCPATH)/*.o *.o mcluster_sse mcluster mcluster_gpu
