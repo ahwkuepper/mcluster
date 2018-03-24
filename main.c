@@ -4598,7 +4598,7 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char PARfile[200], NBODYfile[200], SSEfile[200];		
 	FILE *PAR, *NBODY, *SSE12;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
@@ -4670,7 +4670,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 int output1(char *output, int N, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50];		
+	char PARfile[200], NBODYfile[200];		
 	FILE *PAR, *NBODY;
 	sprintf(PARfile, "%s.PAR",output);
 	PAR = fopen(PARfile,"w");
@@ -4718,7 +4718,7 @@ int output1(char *output, int N, double dtadj, double dtout, double tcrit, doubl
 int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char PARfile[200], NBODYfile[200], SSEfile[200];		
 	FILE *PAR, *NBODY, *SSE12;
 	sprintf(PARfile, "%s.PAR",output);
 	PAR = fopen(PARfile,"w");
@@ -4789,7 +4789,7 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 int output3(char *output, int N, double rvir, double rh, double mmean, double M, double epoch, double Z, double *RG, double *VG, double rtide, double **star, double Rgal, double extmass, double extrad){
 	//Open output files
-	char tablefile[20];		
+	char tablefile[200];		
 	FILE *TABLE;
 	sprintf(tablefile, "%s.txt",output);
 	TABLE = fopen(tablefile,"w");
@@ -4869,7 +4869,7 @@ int output3(char *output, int N, double rvir, double rh, double mmean, double M,
 int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 	
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char PARfile[200], NBODYfile[200], SSEfile[200];		
 	FILE *PAR, *NBODY, *SSE12;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
@@ -4939,7 +4939,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char PARfile[200], NBODYfile[200], SSEfile[200];		
 	FILE *PAR, *NBODY, *SSE12;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
@@ -5010,7 +5010,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 void info(char *output, int N, double Mcl, int profile, double W0, double S, double D, double Q, double Rh, double gamma[], double a, double Rmax, double tcrit, int tf, double RG[], double VG[], int mfunc, double single_mass, double mlow, double mup, double alpha[], double mlim[], double alpha_L3, double beta_L3, double mu_L3, int weidner, int mloss, int remnant, double epoch, double Z, int prantzos, int nbin, double fbin, int pairing, double msort, int adis, double amin, double amax, int eigen, int BSE, double extmass, double extrad, double extdecay, double extstart, int code, int seed, double dtadj, double dtout, double dtplot, int gpu, int regupdate, int etaupdate, int esc, int units, int match, int symmetry, int OBperiods) {
 	int i;
-	char INFOfile[50];		
+	char INFOfile[200];		
 	FILE *INFO;
 	sprintf(INFOfile, "%s.info",output);
 	INFO = fopen(INFOfile,"w");
