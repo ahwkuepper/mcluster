@@ -20,6 +20,9 @@ OBJECTS := $(SOURCES:.f=.o)
 %.o:%.f
 	$(FC) -c $^ -o $@
 
+# Default
+all: mcluster
+
 mcluster_sse: $(OBJECTS)
 	$(CC) -c main.c -D SSE -lm
 	$(CC) $(OBJECTS) main.o -o mcluster_sse -lm $(CFLAGS)
