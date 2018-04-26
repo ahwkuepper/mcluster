@@ -985,10 +985,18 @@ int main (int argv, char **argc) {
 	 * Scaling * 
 	 ***********/
 
-	printf("\n\n-----SCALING-----      \n"); 
-		
+	printf("\n\n-----SCALING-----      \n");
+
+    // Notice the total mass is changed after get_binaries, thus the total/mean mass should be updated
+    double Mnew = 0;
+    for(j=0; j<N; j++) Mnew += star[j][0]*M;
+    mmean = Mnew/N;
+    printf("\nRe-calculate the total mass after binary generation for scaling: Mnew=%f ",Mnew);
+    
 	//scale masses, pos & vel to astrophysical units or Nbody units
-	tscale = sqrt(rvir*rvir*rvir/(G*M));
+	tscale = sqrt(rvir*rvir*rvir/(G*Mnew));
+    
+    printf("\nTime scaling: tscale=%f ",tscale);
 
 	if (units) {		
 		printf("\nScaling to astrophysical units.\n");
@@ -1007,15 +1015,16 @@ int main (int argv, char **argc) {
 	} else {
 		printf("\nScaling to Nbody units.\n");
 	}
+    M = Mnew;
 
 	//scale mass, radius and decay time of external (gas) potential to Nbody units
     if (!(code == 3 && units)) {
-        if (extmass) extmass /= M;
+        if (extmass) extmass /= Mnew;
         if (extrad) extrad /= rvir;
         if (extdecay) extdecay = 1.0/(extdecay/tscale);
         if (extstart) extstart = extstart/tscale;
     }
-    tcrit /= 14.9369019058*sqrt(rvir*rvir*rvir/M);
+    tcrit /= 14.9369019058*sqrt(rvir*rvir*rvir/Mnew);
 
 	/**********
 	 * Output * 
@@ -1034,7 +1043,7 @@ int main (int argv, char **argc) {
 	else if (code == 4) 
 		output4(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 5) 
-		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
+		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, units);
 	
 	
 	
@@ -4994,7 +5003,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
     
 }
 
-int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
+int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, int units){
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
@@ -5020,10 +5029,10 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .PAR file	
 	fprintf(PAR,"1 5000000.0 5000000.0 40 40 0\n");
 	fprintf(PAR,"%i 1 10 %i %i 1 10\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.8f %.8f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.16f %.16f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
 	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 6 %i 0 1 2 1 0 0 1\n", esc);
+	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 1\n", (units>0?10:6),esc);
 	fprintf(PAR,"1 0 3 2 1 0 0 2 0 0\n");
 	fprintf(PAR,"0 0 0 0 0 2 -3 0 0 0\n");
 	fprintf(PAR,"%f %f 0.2 1.0 %f 0.001 0.125\n",dtmin, rmin, gmin);
