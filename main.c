@@ -994,9 +994,7 @@ int main (int argv, char **argc) {
     printf("\nRe-calculate the total mass after binary generation for scaling: Mnew=%f ",Mnew);
     
 	//scale masses, pos & vel to astrophysical units or Nbody units
-	tscale = sqrt(rvir*rvir*rvir/(G*Mnew));
-    
-    printf("\nTime scaling: tscale=%f ",tscale);
+	tscale = sqrt(rvir*rvir*rvir/(G*M)); // to be consistent with old M
 
 	if (units) {		
 		printf("\nScaling to astrophysical units.\n");
@@ -1015,16 +1013,21 @@ int main (int argv, char **argc) {
 	} else {
 		printf("\nScaling to Nbody units.\n");
 	}
-    M = Mnew;
 
 	//scale mass, radius and decay time of external (gas) potential to Nbody units
     if (!(code == 3 && units)) {
-        if (extmass) extmass /= Mnew;
+        if (extmass) extmass /= M;
         if (extrad) extrad /= rvir;
         if (extdecay) extdecay = 1.0/(extdecay/tscale);
         if (extstart) extstart = extstart/tscale;
     }
-    tcrit /= 14.9369019058*sqrt(rvir*rvir*rvir/Mnew);
+
+    M = Mnew;
+
+	tscale = sqrt(rvir*rvir*rvir/(G*M)); // to be consistent with new M
+    printf("\nNew Time scaling: tscale=%f ",tscale);
+    
+    tcrit /= tscale;
 
 	/**********
 	 * Output * 
@@ -1043,7 +1046,7 @@ int main (int argv, char **argc) {
 	else if (code == 4) 
 		output4(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 5) 
-		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, units);
+		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, 0);
 	
 	
 	
