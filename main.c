@@ -997,7 +997,7 @@ int main (int argv, char **argc) {
 	tscale = sqrt(rvir*rvir*rvir/(G*M)); // to be consistent with old M
 
 	if (units) {		
-		printf("\nScaling to astrophysical units.\n");
+		printf("\nScaling to astrophysical units. rscale=%f; vscale=%f\n",rvir, rvir/tscale);
 		for (j=0; j<N; j++) star[j][0] *= M;
 
 		for (j=0; j<N; j++) {
@@ -1014,6 +1014,12 @@ int main (int argv, char **argc) {
 		printf("\nScaling to Nbody units.\n");
 	}
 
+    //rvir = rvir/Mnew*M;
+    //printf("\nNew Time scaling: rvir=%f ",rvir);
+    M = Mnew;
+    tscale = sqrt(rvir*rvir*rvir/(G*M)); // to be consistent with new M
+    printf("\nNew Time scaling: tscale=%f ",tscale);
+
 	//scale mass, radius and decay time of external (gas) potential to Nbody units
     if (!(code == 3 && units)) {
         if (extmass) extmass /= M;
@@ -1022,10 +1028,6 @@ int main (int argv, char **argc) {
         if (extstart) extstart = extstart/tscale;
     }
 
-    M = Mnew;
-
-	tscale = sqrt(rvir*rvir*rvir/(G*M)); // to be consistent with new M
-    printf("\nNew Time scaling: tscale=%f ",tscale);
     
     tcrit /= tscale;
 
@@ -1046,7 +1048,7 @@ int main (int argv, char **argc) {
 	else if (code == 4) 
 		output4(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 5) 
-		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, 0);
+		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	
 	
 	
@@ -5006,7 +5008,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
     
 }
 
-int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, int units){
+int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
@@ -5035,7 +5037,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.16f %.16f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
 	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 1\n", (units>0?10:6),esc);
+	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 1\n", (bin==-1?10:2),esc);
 	fprintf(PAR,"1 0 3 2 1 0 0 2 0 0\n");
 	fprintf(PAR,"0 0 0 0 0 2 -3 0 0 0\n");
 	fprintf(PAR,"%f %f 0.2 1.0 %f 0.001 0.125\n",dtmin, rmin, gmin);
