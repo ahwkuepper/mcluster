@@ -75,7 +75,7 @@ int main (int argv, char **argc) {
 	double gamma[3] = {2.0, 0.0, 2.0}; //Power-law slopes of EFF/Nuker templates (outer slope, inner slope, transition); set gamma[1] = 0.0 and gamma[2] = 2.0 for EFF (profile = 3)  
 	double a = 1.0;					//Scale radius of EFF/Nuker template (profile = 3) [pc]
 	double Rmax = 100.0;			//Cut-off radius for EFF/Nuker template (profile = 3) [pc]
-	double tcrit = 100.0;			//Simulation time [N-body units (Myr in Nbody6 custom)]
+	double tcrit = 100.0;			//Simulation time [Myr]
 	int tf = 3;						//Tidal field: =0 no tidal field, =1 Near-field approximation, =2 point-mass galaxy, =3 Allen & Santillan (1991) MW potential (or Sverre's version of it)
 	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
@@ -1028,7 +1028,6 @@ int main (int argv, char **argc) {
         if (extstart) extstart = extstart/tscale;
     }
 
-    
     tcrit /= tscale;
 
 	/**********
@@ -1048,7 +1047,7 @@ int main (int argv, char **argc) {
 	else if (code == 4) 
 		output4(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 5) 
-		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
+		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit*tscale, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	
 	
 	
@@ -2010,10 +2009,7 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 
 	
 	
-	if (W0>12.0) {
-		printf("W0 too large\n");
-		return 0;
-	} else if (W0 < 0.2) {
+    if (W0 < 0.2) {
 		printf("W0 too small\n");
 		return 0;
 	}
@@ -5008,7 +5004,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
     
 }
 
-int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
+int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcritp, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
@@ -5032,9 +5028,9 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
     double dtmin = pow(rmin,1.5);
 	
 	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 5000000.0 40 40 0\n");
+	fprintf(PAR,"1 5000000.0 %.16f 40 40 0\n",tcritp);
 	fprintf(PAR,"%i 1 10 %i %i 1 10\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.16f %.16f\n",RS0,dtadj,dtout,tcrit,ecrit,rvir,mmean);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.16f %.16f\n",RS0,dtadj,dtout,tcrit*10.0,ecrit,rvir,mmean);
 	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
 	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 1\n", (bin==-1?10:2),esc);
