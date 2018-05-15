@@ -38,6 +38,7 @@
 
 
 #include<stdio.h>
+#include<fenv.h>
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
@@ -152,7 +153,8 @@ int main (int argv, char **argc) {
 	int gn = 0;						//Counter for EFF/Nuker profile parameters
 	double extgas[4];				//Input array for external potential parameters
 	
-	
+    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+    
 	//SSE internal parameters (see Hurley, Pols & Tout 2000) 
 	value1_.neta = 0.5;			//Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally)
 	value1_.bwind = 0.0;		//Binary enhanced mass loss parameter (inactive for single)
@@ -2010,12 +2012,9 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 
 	
 	
-	if (W0>12.0) {
-		printf("W0 too large\n");
-		return 0;
-	} else if (W0 < 0.2) {
+    if (W0 < 0.2) {
 		printf("W0 too small\n");
-		return 0;
+		abort();
 	}
 	
 	
@@ -2317,9 +2316,9 @@ int odeint(double ystart0, double ystart1, double x1, double x2, double den, int
 	
 	x = x1;   //King's W parameter
 	if (x2-x1 >= 0.0) {
-		h = sqrt(pow(H1,2));
+		h = fabs(H1);
 	} else {
-		h = - sqrt(pow(H1,2));
+		h = - fabs(H1);
 	}  //step size
 	
 	y[0] = ystart0;  //z^2
@@ -2332,10 +2331,10 @@ int odeint(double ystart0, double ystart1, double x1, double x2, double den, int
 		derivs(x,y,dydx,den); //find derivative
 		
 		for (j=0;j<2;j++) {
-			yscal[j] = sqrt(pow(y[j],2))+sqrt(h*dydx[j])+TINY;  //advance y1 and y2
+			yscal[j] = fabs(y[j])+fabs(h*dydx[j])+TINY;  //advance y1 and y2
 		}
 		
-		if (sqrt(pow(x-xsav,2)) > sqrt(pow(DXSAV,2))) {
+		if (fabs(x-xsav) > fabs(DXSAV)) {
 			if (*kount < KMAX-1) {
 				xp[*kount] = x;
 				for (j=0;j<2;j++) {
@@ -2362,7 +2361,7 @@ int odeint(double ystart0, double ystart1, double x1, double x2, double den, int
 			*kount = *kount +1;
 		}
 		
-		if (sqrt(pow(hnext,2)) < HMIN) {
+		if (fabs(hnext) < HMIN) {
 			printf("Stepsize smaller than minimum.\n");
 			return 0;
 		}
@@ -2427,7 +2426,7 @@ int rkqc(double *y,double *dydx, double *x, double *h, double den, double *yscal
 		errmax = 0.0;
 		for (i=0;i<2;i++) {
 			ytemp[i] = y[i] - ytemp[i];
-			errmax = max(errmax, sqrt(pow(ytemp[i]/yscal[i],2)));
+			errmax = max(errmax, fabs(ytemp[i]/yscal[i]));
 		}
 		errmax /= TOL;
 		if (errmax > 1.0) *h = safety**h*(pow(errmax,pshrnk)); //if integration error is too large, decrease h
@@ -4454,8 +4453,11 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 		}
 	} 
 	
+	double rmin = 0.1;
+	double rmax = 0; //pc
 	for (j=0; j<N; j++) {
 		rarray[j][0] = rvir*sqrt(star[j][1]*star[j][1]+star[j][2]*star[j][2]+star[j][3]*star[j][3]);
+        rmax = max(rarray[j][0]+rmin,rmax);
 		rarray[j][1] = star[j][0]*M;
 		rarray[j][2] = star[j][12];
 		rarray2D[j][0] = rvir*sqrt(star[j][1]*star[j][1]+star[j][2]*star[j][2]);
@@ -4467,8 +4469,6 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 	
 	int noofradialbins = 20;
 	double rprofile[noofradialbins][9];
-	double rmax = 100.0; //pc
-	double rmin = 0.1;
 	double stepsize;
 	stepsize = (log10(rmax)-log10(rmin))/(noofradialbins-1);
 		
@@ -5169,7 +5169,7 @@ void help(double msort) {
 	printf("                   2= Subr et al. (2007) mass-segregated,            \n");
 	printf("                   3= 2-dimensional EFF/Nuker template,              \n");
 	printf("                   -1= no density gradient)                          \n");
-	printf("       -W <1-12> (W0 parameter for King model)                       \n");
+	printf("       -W <0.2-inf> (W0 parameter for King model)                       \n");
 	printf("       -R <value> (half-mass radius [pc], ignored for P = 3;         \n");
 	printf("                   if -1, use Marks & Kroupa (2012) Mcl-Rh relation) \n");
 	printf("       -r <value> (scale radius of EFF/Nuker template [pc])          \n");
