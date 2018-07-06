@@ -241,8 +241,20 @@ int main (int argv, char **argc) {
 		case 'h':	help(msort); return 1;
 		case '?':	help(msort); return 1;
 	};
+	// some parameters ought to be checked for validity
+	if (S<0 || S>1) {
+	  printf("Bad value of S=%g\n",S);
+	  exit(1);
+	}
 
-    if (mn-1 > 0) mup = mlim[mn-1];
+        if (mn-1 > 0) mup = mlim[mn-1];
+
+	if (seed) srand48(seed);				//initialize random number generator by seed
+	else {
+		seed = (unsigned) time(NULL);	//initialize random number generator by local time
+		seed %= 100000;
+		srand48(seed);
+	}
 
 	//print summary of input parameters to .info file
 	info(output, N, Mcl, profile, W0, S, D, Q, Rh, gamma, a, Rmax, tcrit, tf, RG, VG, mfunc, single_mass, mlow, mup, alpha, mlim, alpha_L3, beta_L3, mu_L3, weidner, mloss, remnant, epoch, Z, prantzos, nbin, fbin, pairing, msort, adis, amin, amax, eigen, BSE, extmass, extrad, extdecay, extstart, code, seed, dtadj, dtout, dtplot, gpu, regupdate, etaupdate, esc, units, match, symmetry, OBperiods);
@@ -268,12 +280,6 @@ int main (int argv, char **argc) {
 	}
 #endif
   
-	if (seed) srand48(seed);				//initialize random number generator by seed
-	else {
-		seed = (unsigned) time(NULL);	//initialize random number generator by local time
-		seed %= 100000;
-		srand48(seed);
-	}
 	printf ("\n\nRandom seed = %i\n\n\n", seed);
 	if (seed) value3_.idum = seed;			//idum is the random number seed used in the kick routine. 
 	else value3_.idum = 10000000.0*drand48();
@@ -4598,17 +4604,17 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char *PARfile, *NBODYfile, *SSEfile;
 	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.input",output);
+	PARfile = strcat(output,".input");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.fort.10",output);
+	NBODYfile = strcat(output,".fort.10");
 	NBODY = fopen(NBODYfile,"w");
 
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
 	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
+		SSEfile = strcat(output,".fort.12");
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
@@ -4670,11 +4676,11 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 int output1(char *output, int N, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50];		
+	char *PARfile, *NBODYfile;
 	FILE *PAR, *NBODY;
-	sprintf(PARfile, "%s.PAR",output);
+	PARfile = strcat(output,".PAR");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
+	NBODYfile = strcat(output,".NBODY");
 	NBODY = fopen(NBODYfile,"w");
 	
 	//write to .PAR file	
@@ -4718,17 +4724,17 @@ int output1(char *output, int N, double dtadj, double dtout, double tcrit, doubl
 int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
+	char *PARfile, *NBODYfile, *SSEfile;		
 	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.PAR",output);
+	PARfile = strcat(output,".PAR");
 	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
+	NBODYfile = strcat(output,".NBODY");
 	NBODY = fopen(NBODYfile,"w");
 	
 	int hrplot = 0;
 	if (dtplot) hrplot = 1;
 	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
+		SSEfile = strcat(output,".fort.12");
 		SSE12 = fopen(SSEfile,"w");
 		hrplot = 2;
 	}		
@@ -4789,11 +4795,10 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 int output3(char *output, int N, double rvir, double rh, double mmean, double M, double epoch, double Z, double *RG, double *VG, double rtide, double **star, double Rgal, double extmass, double extrad){
 	//Open output files
-	char tablefile[20];		
+	char *tablefile = strcat(output,".txt");
 	FILE *TABLE;
-	sprintf(tablefile, "%s.txt",output);
-	TABLE = fopen(tablefile,"w");
 	
+	TABLE = fopen(tablefile,"w");
 	
 	//write to .txt file
 	int i, j;
