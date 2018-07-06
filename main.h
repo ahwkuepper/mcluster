@@ -1,13 +1,14 @@
 //Constants
-#define G 0.0043009211 //in pc*km^2*s^-2*Msun
+//#define G 0.0043009211 //in pc*km^2*s^-2*Msun^-1
+#define G 0.00449850214  //in pc*km^2*s^-2*Msun^-1 consistent with IAU2009 SAC
 #define Pi 3.14159265
 #define PI 3.14159265
 #define TWOPI 6.2831853   /* 2PI */
 #define GNBODY 1.0
 #define MNBODY 1.0
-#define PARSEC  3.08568E13      /* KM pro PC */
+#define PARSEC  3.0856776E13      /* KM pro PC */
 #define GBIN    1.327126E11     /* G in (km/sec)^3/Msun */
-#define RSUN    6.96265E5       /* Solar radius in km */
+#define RSUN    6.957E5       /* Solar radius in km */
 
 //Functions
 #define max(a,b)         (a < b) ?  (b) : (a)
@@ -192,7 +193,7 @@ int segregate(double **star, int N, double S);
 int energy_order(double **star, int N, int Nstars);
 int randomize(double **star, int N);
 double rtnewt (double ecc, double ma);
-int eigenevolution(double *m1, double *m2, double *ecc, double *abin);
+int eigenevolution(double *m1, double *m2, double *ecc, double *abin, int opt);
 int radial_profile(double **star, int N, double rvir, double M,int create_radial_profile, int create_cumulative_profile, int code, int *NNBMAX, double *RS0, double *Rh2D, double *Rh3D, int NNBMAX_NBODY6);
 int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double *BV, double *Teff, double *dvmag, double *dBV);
 int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart);
