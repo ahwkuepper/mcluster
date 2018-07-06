@@ -190,23 +190,99 @@ int main (int argv, char **argc) {
 	{
 		case 'N': N = atoi(optarg); Mcl = 0.0; break;
 		case 'M': Mcl = atof(optarg); N = 0; break;
-		case 'P': profile = atoi(optarg); break;
-		case 'W': W0 = atof(optarg); break;
-		case 'R': Rh = atof(optarg); break;
-		case 'r': a = atof(optarg); break;
-		case 'c': Rmax = atof(optarg); break;
+		case 'P':
+            profile = atoi(optarg);
+            if ((profile >= 0 && profile <= 3) || profile == -1)
+                break;
+            else {
+                printf("\nError: Density profile (P) needs to "
+                    "be 0, 1, 2, 3 or -1, %d was given\n", profile);
+                exit(1);
+            }
+		case 'W':
+            W0 = atof(optarg);
+            if (W0 >= 0.3 && W0 <= 12.0)
+                break;
+            else {
+                printf("\nError: King's parameter (W) needs to be between 0.3 "
+                    "and 12.0, %f was given\n", W0);
+                exit(1);
+            }
+		case 'R':
+            Rh = atof(optarg);
+            break;
+		case 'r':
+            a = atof(optarg);
+            break;
+		case 'c':
+            Rmax = atof(optarg);
+            break;
 		case 'g': 
-			if (gn < 3) { gamma[gn] = atof(optarg); gn++; break; }
-		case 'S': S = atof(optarg); break;
-		case 'D': D = atof(optarg); break;
-		case 'T': tcrit = atof(optarg); break;
-		case 'Q': Q = atof(optarg); break;
-		case 'C': code = atoi(optarg); break;
-		case 'A': dtadj = atof(optarg); break;
-		case 'O': dtout = atof(optarg); break;
-		case 'G': gpu = atoi(optarg); break;
-		case 'o': output = optarg; break;
-		case 'f': mfunc = atoi(optarg); break;
+			if (gn < 3) {
+                gamma[gn] = atof(optarg);
+                gn++;
+                break;
+            }
+		case 'S':
+            S = atof(optarg);
+            if (S >= 0 && S <= 0.99)
+                break;
+            else {
+                printf("\nError: Fraction of mass segretation (S) needs to "
+                    "between 0 and 0.99, %f was given\n", S);
+                exit(1);
+            }
+		case 'D': 
+            D = atof(optarg);
+            if (D == 3.0 || D == 2.6 || D == 2.0 || D == 1.6)
+                break;
+            else {
+                printf("\nError: Fractal dimension (D) needs to "
+                    "be 1.6, 2.0, 2.6 or 3.0, %f was given\n", D);
+                exit(1);
+            }
+		case 'T':
+            tcrit = atof(optarg);
+            break;
+		case 'Q':
+            Q = atof(optarg);
+            break;
+		case 'C':
+            code = atoi(optarg);
+            if (code >= 0 && code <= 5)
+                break;
+            else {
+                printf("\nError: Nbody version (C) needs to "
+                    "be between 0 and 5, %d was given\n", code);
+                exit(1);
+            }
+		case 'A':
+            dtadj = atof(optarg);
+            break;
+		case 'O':
+            dtout = atof(optarg);
+            break;
+		case 'G':
+            gpu = atoi(optarg);
+            if (gpu == 0 || gpu == 1)
+                break;
+            else {
+                printf("\nError: Use of GPU (G) needs to "
+                    "be between 0 or 1, %d was given\n", gpu);
+                exit(1);
+            }
+		case 'o':
+            output = optarg;
+            break;
+		case 'f':
+            mfunc = atoi(optarg);
+            if (mfunc >= 0 && mfunc <= 2)
+                break;
+            else {
+                printf("\nError: Mass function (f) needs to "
+                    "be between 0 and 2, %d was given\n", mfunc);
+                exit(1);
+            }
 		case 'a' :
 			if (an < MAX_AN) { 
 				alpha[an] = atof(optarg);
@@ -226,11 +302,35 @@ int main (int argv, char **argc) {
 			} else { printf("\nError: Number of mass params exceded maximum limit of %d\n", MAX_MN); return 1; }
 		case 'B': nbin = atoi(optarg); break;
 		case 'b': fbin = atof(optarg); break;
-		case 'p': pairing = atoi(optarg); break;
+		case 'p':
+            pairing = atoi(optarg);
+            if (pairing >= 0 && pairing <= 3)
+                break;
+            else {
+                printf("\nError: Pairing of binary components (p) needs to "
+                    "be between 0 and 3, %d was given\n", pairing);
+                exit(1);
+            }
 		case 's': seed = atoi(optarg); break;
-		case 't': tf = atoi(optarg); break;
+		case 't':
+            tf = atoi(optarg);
+            if (tf >= 0 && tf <= 3)
+                break;
+            else {
+                printf("\nError: Tidal field (t) needs to "
+                    "be between 0 and 3, %d was given\n", tf);
+                exit(1);
+            }
 		case 'e': epoch = atof(optarg); break;
-		case 'Z': Z = atof(optarg); break;
+		case 'Z':
+            Z = atof(optarg);
+            if (Z >= 0.0001 && Z <= 0.03)
+                break;
+            else {
+                printf("\nError: Metallicity (Z) needs to "
+                    "be between 0.0001 and 0.03, %f was given\n", Z);
+                exit(1);
+            }
 		case 'X' :
 			if (xn < 3) { RG[xn] = atof(optarg); xn++; break; }
 		case 'V' :
