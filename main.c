@@ -37,17 +37,15 @@
  ***************************************************************************/
 
 /***************************************************************************
- * Implemented 20th June 2018 by A. Leveque                                *
+ * Implemented 20th June 2018 by A. Leveque (agostino@camk.edu.pl)                                *
  * to include scaling in N-body units assuming spherical symmetry, new     *
  * eigenevolutoin for initial binary proprieties (D. Belloni et al., 2017, *
  * MNRAS, 471, 2812) and multiple stellar population                       *
- *                                                                         *
+ * 									   *
  * Multiple stellar population prosiger: generation of different stellar   *
  * populations separately; solving Jeans equation to obtain velocities for *
- * dynamical equilibrium; COM corrections and scaling in N-body units      *
- *                                                                         *
- * Propreties of the cluster can be changed only in the main.c file and    *
- * then recompiling the code                                               *
+ * dynamical equilibrium (acknowledge to J. Hong); COM corrections and     *
+ * scaling in N-body units                                                 *
  ***************************************************************************/
 
 
@@ -68,6 +66,8 @@
 #ifndef NOOMP
 #include<omp.h>
 #endif
+extern void input_();
+
 
 int main (int argv, char **argc) {
 
@@ -76,51 +76,69 @@ int main (int argv, char **argc) {
 	 *******************/
 	
 	//Basic physical parameters
+        input_();
 
-   	int N[10] = {100000};                    //Number of stars
-   	double Mcl = 0.0;			            //Total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa (2006
-   	int profile[10] = {1};				    //Density profile; =1 Plummer model, =2 King model (based on king0.f by D.C. Heggie), =3 mass segregated Subr model (Subr et al. 2007), =4 2-dimensional EFF template (Elson, Fall & Freeman 1987) or Nuker template (Lauer et al. 1995), =0 no density gradient
-	double W0[10] = {3.0};				    //King's W0 paramter [0.3-12.0]
-	double S[10] = {0.0};			    	//Fraction of mass segregation for profile; =0.0 unsegregated, =1.0 completely segregated (take maximally S=0.99 for profile=2)
-	double D[10] = {3.0};			    	//Fractal dimension; =3.0 unfractal, =2.6 2/8 fractal, =2.0 4/8 fractal, =1.6 6/8 fractal, (2^D children per parent, following Goodwin & Whitworth 2004);
-	double Qtot = 0.5;					    //Initial virial ratio; =0.5 virial equilibrium, <0.5 collapsing, >0.5 expanding
-	double Rh[10] = {1.0};				    //Half-mass radius [pc], ignored if profile = 3, set =-1 for using Marks & Kroupa (2012) Mcl-Rh relation
-	double gamma[10][3] = {{2.0, 0.0, 2.0}}; //Power-law slopes of EFF/Nuker templates (outer slope, inner slope, transition); set gamma[1] = 0.0 and gamma[2] = 2.0 for EFF (profile = 3)  
-	double a[10] = {1.0};					//Scale radius of EFF/Nuker template (profile = 3) [pc]
-	double Rmax[10] = {100.0};			    //Cut-off radius for EFF/Nuker template (profile = 3) [pc]
-	double tcrit = 100.0;			        //Simulation time [N-body units (Myr in Nbody6 custom)]
-	int tf = 0;						        //Tidal field: =0 no tidal field, =1 point-mass galaxy
-	double rbar = 35.8;		                //Tidal radius for point mass tidal field 
-//	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
-//	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
-	
+	int i;
+   	int N[10], profile[10], mfunc[10], pairing[10], adis[10], OBperiods[10], eigen[10];
+	double fbin[10], conc_pop[10], W0[10], S[10], D[10], a[10], Rmax[10], single_mass[10], mlow[10], mup[10], alpha_L3[10], beta_L3[10], mu_L3[10], msort[10], amin[10], amax[10], epoch[10], Z[10];
+	for (i=0;i<10;i++) {
+		N[i] = mclusterarri_.npop[i];
+		profile[i] = mclusterarri_.initmodel[i];
+		mfunc[i] = mclusterarri_.imfg[i];
+		pairing[i] = mclusterarri_.pairing[i];
+		adis[i] = mclusterarri_.adis[i];
+		OBperiods[i] = 0;
+		eigen[i] = mclusterarri_.eigen[i];
+		fbin[i] = mclusterarrd_.fracb[i];
+		W0[i] = mclusterarrd_.w0[i];
+		conc_pop[i] = mclusterarrd_.conc_pop[i];
+		S[i] = mclusterarrd_.Seg[i];
+		D[i] = mclusterarrd_.fractal[i];
+		single_mass[i] = mclusterarrd_.equalmass[i];
+		mlow[i] = mclusterarrd_.mlow[i];
+		mup[i] = mclusterarrd_.mup[i];
+		alpha_L3[i] = mclusterarrd_.alpha_L3[i];
+		beta_L3[i] = mclusterarrd_.beta_L3[i];
+		mu_L3[i] = mclusterarrd_.mu_L3[i];
+		msort[i] = 5.0;
+		amin[i] = (mclusterarrd_.amin[i]); //input in rsun, the code need in pc
+		amax[i] = (mclusterarrd_.amax[i]); //input in rsun, the code need in pc
+		epoch[i] = mclusterarrd_.epoch_pop[i];
+		Z[i] = mclusterarrd_.zini_pop[i];
+	}
+
+	double Mcl = 0.0;			//Total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa (2006)
+	double Qtot = mclusterd_.qvir;					//Initial virial ratio; =0.5 virial equilibrium, <0.5 collapsing, >0.5 expanding
+
+	double tcrit = 100.0;			//Simulation time [N-body units (Myr in Nbody6 custom)]
+	int tf = mclusteri_.tf;						//Tidal field: =0 no tidal field, =1 point-mass galaxy
+	double rbar = mclusterd_.rbar;		//Tidal radius for point mass tidal field 
+	double rh_mcl = mclusterd_.rh_mcl;		//Half mass radius radius for the whole system
+
 	//Mass function parameters
-   	int mfunc[10] = {1};					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law (based on mufu.c by L.Subr)
-	double single_mass[10] = {1.0};		    //Stellar mass in case of single-mass cluster 
-	double mlow[10] = {0.08};				//Lower mass limit for mfunc = 1 & mfunc = 4
-	double mup[10] = {100.0};				//Upper mass limit for mfunc = 1 & mfunc = 4
-	double alpha[10][MAX_AN] = {{-1.35, -2.35, -2.7, 0.0, 0.0}};		//alpha slopes for mfunc = 2
-	double mlim[10][MAX_MN] = {{0.08, 0.5, 4.0, 100.0, 0.0, 0.0}};	//mass limits for mfunc = 2
-	double alpha_L3[10] = {2.3};			//alpha slope for mfunc = 4 (L3 mass function, Maschberger 2012)
-	double beta_L3[10] = {1.4};		     	//beta slope for mfunc = 4
-	double mu_L3[10] = {0.2};				//mu parameter for mfunc = 4
-	int weidner[10] = {0};				    //Usage of Weidner & Kroupa (2006) relation for most massive star; =0 off, =1 on
-	int mloss = 0;					        //Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
-	int remnant = 1;				        //Use random kick velocity and present-day escape velocity to determine retention of compact remnants & evolved binary components (only for SSE/BSE version); =0 off, =1 on
-	double epoch[10] = {0.0};			    //Age of the cluster, i.e. star burst has been ... Myr before [e.g. 1000.0, default = 0.0] [needs special compiling and SSE by Hurley, Pols & Tout]
-	double Z[10] = {0.02};				    //Metallicity [0.0001-0.03, 0.02 = solar]
-	double FeH = -1.41;				        //Metallicity [Fe/H], only used when Z is set to 0
-	int prantzos = 0;				        //Usage of Prantzos (2007) relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
+	int p;
+	double **alpha;
+	alpha = (double **)calloc(10,sizeof(double *));
+	for (p=0;p<10;p++){
+		alpha[p] = (double *)calloc(MAX_AN,sizeof(double));
+	}
+	multiplearraytodouble(mclusterchar_.alphaimfchar, alpha);
+
+	double **mlim;
+	mlim = (double **)calloc(10,sizeof(double *));
+	for (p=0;p<10;p++){
+		mlim[p] = (double *)calloc(MAX_MN,sizeof(double));
+	}
+	multiplearraytodouble(mclusterchar_.mlimimfchar, mlim);
+
+	int weidner[10] = {0, 0};				//Usage of Weidner & Kroupa (2006) relation for most massive star; =0 off, =1 on
+
+	int mloss = 0;					//Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
+	int remnant = 1;				//Use random kick velocity and present-day escape velocity to determine retention of compact remnants & evolved binary components (only for SSE/BSE version); =0 off, =1 on
+
+	double FeH = -1.41;				//Metallicity [Fe/H], only used when Z is set to 0
+	int prantzos = 0;				//Usage of Prantzos (2007) relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
 	
-	//Binary parameters
-	double fbin[10] = {0};				    //Number of primordial binary systems
-   	int pairing[10] = {3};			    	//Primordial binary fraction, number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
-	double msort[10] = {5.0};				//Pairing of binary components; 0= random pairing, 1= ordered pairing for components with masses M>msort, 2= random but separate pairing for components with masses m>Msort; 3= Uniform distribution of mass ratio (0.1<q<1.0) for m>Msort and random pairing for remaining (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014; implemented by Long Wang)
-   	int adis[10] = {3};				        //Stars with masses > msort will be sorted and preferentially paired into binaries if pairing = 1
-   	int OBperiods[10] = {1};				//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution for M<Msort; based on Sana et al. (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
-   	int eigen[10] = {1};				    //Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011) if OBperiods = 1
-	double amin[10] = {0.0001};			    //Minimum semi-major axis for adis = 0 [pc]
-	double amax[10] = {0.01};				//Maximum semi-major axis for adis = 0 [pc]
 #ifdef SSE
 	int BSE = 1;					//Apply binary star evolution using BSE (Hurley, Tout & Pols 2002) =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
 #else
@@ -132,9 +150,9 @@ int main (int argv, char **argc) {
 	double extrad = 0.0;			//external Plummer (gas) sphere scale factor [pc]
 	double extdecay = 0.0;			//decay time for gas expulsion (set 0 for no decay) [Myr] 
 	double extstart = 0.0;			//delay time for start of gas expulsion [Myr]
-	
+
 	//Code parameters
-	unsigned int seed = 0;			//Number seed for random number generator; =0 for randomization by local time
+	unsigned int seed = mclusteri_.seedmc;			//Number seed for random number generator; =0 for randomization by local time
 	double dtadj = 1.0;				//DTADJ [N-body units (Myr in Nbody6 custom)], energy-check time step
 	double dtout = 1.0;				//DELTAT [N-body units (Myr in Nbody6 custom)], output interval, must be multiple of DTADJ
 	double dtplot = 1.0;			//DTPLOT [N-body units (Myr in Nbody6 custom)], output of HRdiagnostics, should be multiple of DTOUT, set to zero if output not desired
@@ -143,7 +161,8 @@ int main (int argv, char **argc) {
 	int etaupdate = 0;				//Update of ETAI & ETAR during computation; 0 = off, 0 > on
 	int esc = 2;					//Removal of escapers; 0 = no removal, 1 = regular removal at 2*R_tide; 2 = removal and output in ESC
 	int units = 0;				    //Units of McLuster output; 0= Nbody-Units, 1= astrophysical units
-	int pot_energy_MOCCA = 1;
+	int pot_energy_MOCCA = mclusteri_.potential_energy;
+	int outputfor = mclusteri_.outputf;
 
 	//McLuster internal parameters
 	int symmetry = 1;				//Force spherical symmetry for fractal clusters; =0 off, =1 on (recommended)
@@ -170,7 +189,7 @@ int main (int argv, char **argc) {
 	flags_.ceflag = 0;			//ceflag > 0 activates spin-energy correction in common-envelope (0) #defunct# 
 	flags_.tflag = 1;			//tflag > 0 activates tidal circularisation (1)
 	flags_.ifflag = 0;			//ifflag > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800 (0)
-	flags_.nsflag = 1;			//nsflag > 0 takes NS/BH mass from Belczynski et al. 2002, ApJ, 572, 407 (1)
+	flags_.nsflag = 1;		//nsflag > 0 takes NS/BH mass from Belczynski et al. 2002, ApJ, 572, 407 (1)
 	flags_.wdflag = 1;			//wdflag > 0 uses modified-Mestel cooling for WDs (0)
 	
 	value5_.beta = 1.0/8.0;		//beta is wind velocity factor: proportional to vwind**2 (1/8)
@@ -186,7 +205,7 @@ int main (int argv, char **argc) {
 	/*********
 	 * Start *
 	 *********/
-	
+
 	printf("\n-----START----         \n"); 
 
 #ifdef NOOMP
@@ -212,16 +231,19 @@ int main (int argv, char **argc) {
 	printf ("\n\nRandom seed = %i\n\n\n", seed);
 	if (seed) value3_.idum = seed;			//idum is the random number seed used in the kick routine. 
 	else value3_.idum = 10000000.0*drand48();
-	int i, j, k;
+
+	int j, k;
 	double M[10];								//Total mass [M_sun]
 	double mmean[10];							//Mean stellar mass [M_sun]
 	int NNBMAX;								//Maximum neighbour number (Nbody6 only)
 	double RS0;								//Initial radius of neighbour sphere [pc], Nbody6 only
 	double rtide;							//Tidal radius [pc]
 	double omega;							//Angular velocity of cluster around the galaxy
-	double rvir[10];							//Virial radius [pc]
+	double rvir;							//Virial radius [pc]
+//	double rvir[10];							//Virial radius [pc]
 	double cmr[7];							//For CoM correction
-	double rking[10], rplummer[10];					//King-, Plummer radius
+//	double rking[10], rplummer[10];					//King-, Plummer radius
+//	double rtidkg[10];
 	double MMAX;							//most massive star
 	double tscale;							//time-scale factor
 	double vscale[10];
@@ -231,7 +253,7 @@ int main (int argv, char **argc) {
 	int bin;								//KZ(22) parameter (binaries yes/no) 
 	int sse;								//(evolved stellar population yes/no)
 	double submass[MAX_AN], subcount[MAX_AN], norm[MAX_AN], N_tmp, M_tmp; //mass function parameters for mfunc = 2	
-	double Mtotal;
+	double Mtotal = 0.0;
 	
 	/***********************
 	 * Generate star array *
@@ -246,11 +268,21 @@ int main (int argv, char **argc) {
 // number of stars and binaries for each stellar population
 	int Ntot = 0, Nbintot = 0;
 	int Nsub = 0, Nbinsub = 0;
-	for (i=0;i<numberofpop;i++) nbin[i] = 0.5*N[i]*fbin[i];
+	for (i=0;i<numberofpop;i++) {
+		nbin[i] = N[i]*fbin[i];
+		N[i] = N[i] + nbin[i];
+	}
 	for (i=0;i<numberofpop;i++){
 		Ntot += N[i];
 		Nbintot += nbin[i];
 	}
+
+//	double rplum_t;
+//	if(numberofpop == 1){
+//		rplum_t = rplum[0];
+//	} else {
+//		rplum_t = rplum[numberofpop-1];
+//	}
 
 	int columns = 15;
 	double **star;
@@ -279,11 +311,27 @@ int main (int argv, char **argc) {
 	double *abinaries;
 	abinaries = (double *)calloc(Nbintot,sizeof(double *));
 
-//START CICLE FOR GENERATE POSITION FOR MULTIPLE POPULATIONS OR FOR SINGLE POPULATION
-	for (i=0;i<numberofpop;i++){ 
-		printf("\nCreating stellar population number %i\n",i+1);
+	double **mbin;	//component mass & stellar evol parameter array
+	mbin = (double **)calloc(Nbintot,sizeof(double *));
+	for (j=0;j<Nbintot;j++){
+		mbin[j] = (double *)calloc(20,sizeof(double));
+		if (mbin[j] == NULL) {
+			printf("\nMemory allocation failed!\n");
+			return 0;
+		}
+	}
 
-		if (profile[i] == 4) Rh[i] = a[i]; //set half-mass radius temporarily to scale radius for computation of escape velocity
+	/*******************
+	 * Generate masses *
+	 *******************/
+	
+	printf("\n\n-----GENERATE MASSES-----     \n"); 
+
+//START CICLE FOR GENERATE MASS FOR MULTIPLE POPULATIONS OR FOR SINGLE POPULATION
+	for (i=0;i<numberofpop;i++){
+		printf("\nCreating mass for stellar population number %i\n",i+1);
+
+//		if (profile[i] == 4) rplum[i] = a[i]; //set half-mass radius temporarily to scale radius for computation of escape velocity
 
 
 		/*******************************************	
@@ -305,16 +353,16 @@ int main (int argv, char **argc) {
 		 * Calculate maximum stellar mass *
 		 **********************************/
 
-		if (mfunc[i] == 3) weidner[i] = 1; //always use Weidner relation when using optimal sampling!
+//		if (mfunc[i] == 3) weidner[i] = 1; //always use Weidner relation when using optimal sampling!
 
-		if (!N[i] && weidner[i] && mfunc[i]) {
-			mup[i] = upper_IMF_limit;  
+//		if (!N[i] && weidner[i] && mfunc[i]) {
+//			mup[i] = upper_IMF_limit;  
 	
-			printf("\nUsing maximum stellar mass-cluster mass relation for upper stellar mass limit\n");
-			printf("\n(Weidner & Kroupa 2006, Pflamm-Altenburg & Kroupa 2007)\n");
+//			printf("\nUsing maximum stellar mass-cluster mass relation for upper stellar mass limit\n");
+//			printf("\n(Weidner & Kroupa 2006, Pflamm-Altenburg & Kroupa 2007)\n");
 
 			//analytic fit to the observational data from Pflamm-Altenburg & Kroupa (2007), implementation by M. Kruckow
-			MMAX = pow(10,2.56*log10(Mcl)*pow(pow(3.82,9.17)+pow(log10(Mcl),9.17),-1/9.17)-0.38);
+//			MMAX = pow(10,2.56*log10(Mcl)*pow(pow(3.82,9.17)+pow(log10(Mcl),9.17),-1/9.17)-0.38);
 
 			/*	
 			//three-part power-law fit to the observational data
@@ -328,9 +376,9 @@ int main (int argv, char **argc) {
 				MMAX = (log10(Mcl)*0.360268003) + 0.313342031;
 				MMAX = pow(10.0,MMAX);
 			}*/
-		} else {
+//		} else {
 			MMAX = mup[i];
-		}	
+//		}	
 	
 		if (mfunc[i] && epoch[i] && prantzos) {
 			printf("\nUsing Prantzos (2007) relation to reduce upper mass limit to Lifetime(mup) > epoch\n");
@@ -338,17 +386,11 @@ int main (int argv, char **argc) {
 				MMAX -= 0.01;
 			}
 		}
-	
-		/*******************
-		 * Generate masses *
-		 *******************/
-	
-		printf("\n\n-----GENERATE MASSES-----     \n"); 
 
 		//for now, all Z and epochs are the same, i.e. a single stellar population
 		if (mfunc[i] == 1) {
-			printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
-			generate_m1(&N[i], star, mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, epoch[i], Z[i], Rh[i], remnant, Nsub);
+			printf(" Maximum stellar mass set to: %.2f\n", MMAX);
+			generate_m1(&N[i], star, mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, epoch[i], Z[i], rh_mcl, remnant, Nsub);
 		} else if (mfunc[i] == 2) {
 			if (mn[i]) {
 				for (j = mn[i]+1; j < MAX_MN; j++) mlim[i][j] = 0.0;
@@ -389,18 +431,18 @@ int main (int argv, char **argc) {
 					submass[j] = norm[j] * subint(mlim[i][j], mlim[i][j+1], alpha[i][j] + 2.);
 					M_tmp += submass[j];
 				}
-				generate_m2(an[i], mlim[i], alpha[i], Mcl, M_tmp, subcount, &N[i], &mmean[i], &M[i], star, MMAX, epoch[i], Z[i], Rh[i], remnant, Nsub);
+				generate_m2(an[i], mlim[i], alpha[i], Mcl, M_tmp, subcount, &N[i], &mmean[i], &M[i], star, MMAX, epoch[i], Z[i], rh_mcl, remnant, Nsub);
 			}
+//	 	} else if (mfunc[i] == 3) {
+//			printf(" Maximum stellar mass set to: %.2f\n",MMAX);
+//			generate_m3(&N[i], star, mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, Nsub);
+//			randomize(star, N[i], Nsub);
 	 	} else if (mfunc[i] == 3) {
-			printf("\nMaximum stellar mass set to: %.2f\n",MMAX);
-			generate_m3(&N[i], star, mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, Nsub);
-			randomize(star, N[i], Nsub);
-		} else if (mfunc[i] == 4) {
-			printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
-			printf("\nUsing L3 IMF (Maschberger 2012)\n");
-			generate_m4(&N[i], star, alpha_L3[i], beta_L3[i], mu_L3[i], mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, epoch[i], Z[i], Rh[i], remnant, Nsub);		
-		} else {
-			printf("\nSetting stellar masses to %.1f solar mass\n", single_mass[i]);
+			printf(" Maximum stellar mass set to: %.2f\n", MMAX);
+			printf(" Using L3 IMF (Maschberger 2012)\n");
+			generate_m4(&N[i], star, alpha_L3[i], beta_L3[i], mu_L3[i], mlow[i], mup[i], &M[i], &mmean[i], MMAX, Mcl, epoch[i], Z[i], rh_mcl, remnant, Nsub);		
+		} else  if (mfunc[i] == 0) {
+			printf(" Setting stellar masses to %.1f solar mass\n", single_mass[i]);
 //			if (!N[i]) N[i] = Mcl/single_mass[i];
 			for (j=0;j<N[i];j++) {
 				star[j+Nsub][0] = single_mass[i];
@@ -418,9 +460,72 @@ int main (int argv, char **argc) {
 			printf("\nM = %g\n", M[i]);
 			mloss = 0;
 		}
+		Mtotal += M[i];
+	}//END CICLE FOR GENERATE MASS FOR MULTIPLE POPULATIONS OR FOR SINGLE POPULATION
+
+	for(j=0;j<numberofpop;j++) printf("\n Mass %i generation: \t%.3f\n", j+1, M[j]);
+	printf("\n Total mass %.3f\n",Mtotal);
 
 
+	/*************************************
+	 * Generate positions and velocities *
+	 *************************************/
 	
+	printf("\n\n-----GENERATE POSITIONS & VELOCITIES-----   \n"); 
+
+	//calculate half-mass radius according to Marks & Kroupa 2012 if Rh is set to -2
+//		if ((rplum[i] == -1) && (M[i])) {
+//			rplum[i] = 0.1*pow(M[i],0.13); //Marks & Kroupa (2012), implementation by M. Kruckow
+//			printf("\nUsing Marks & Kroupa (2012) relation to derive half-mass radius from cluster mass: %g (pc)\n", Rh[i]);
+//		}
+	
+	
+	//evaluate approximate tidal radius assuming circular orbit
+	if (tf == 1) {
+		printf(" Point mass tidal potential\n");
+//		rtide = rbar;	
+	} //else if (!tf) {
+//		rtide = 1.0E6;
+//	}
+		rtide = rbar;	
+	printf("  Approximate tidal radius: %g (pc)\n", rtide);
+
+	//START CICLE FOR GENERATE POSITION FOR MULTIPLE POPULATIONS OR FOR SINGLE POPULATION
+	for (i=0;i<numberofpop;i++){ 
+		printf("\nGenerating positions and velocities for stellar population number %i\n",i+1);
+
+//used to change the correct star array; star_array will be constructed as: Nbinaries_1_gen, Nsingle_1_gen, Nbinaries_2_gen, Nsingle_2_gen, ..
+		if (i == 0){
+			Nsub = 0;
+			Nbinsub = 0;
+		} else {
+			Nsub = Nsub + N[i-1]+nbin[i-1];
+			Nbinsub += nbin[i-1];
+		}
+		//change pairing, adis and OBperiods for eigenevolution
+		if( (adis[i] == 3) && (eigen[i] == 0) ) {
+			OBperiods[i] = 1;
+		}
+
+		//standard distribution for m<5MSun; Sana et al (2012) for m>5MSun
+		if(adis[i] == 6) {
+			OBperiods[i] = 1;
+			pairing[i] = 3;
+			msort[i] = mlow[i]; // to have equal mass distribution also for m<5MSun
+			eigen[i] = 0; // no eigenevolution has to be possible
+		}
+
+		if(eigen[i] == 1){
+			pairing[i] = 1;
+			adis[i] = 2;
+		}
+		
+		if(eigen[i] == 2){
+			pairing[i] = 3;
+			adis[i] = 3;
+			OBperiods[i] = 1;
+		}
+
 		//set all stars to the same metallicity and age for now
 		double epochstar, zstar;
 		epochstar = epoch[i]; //age compared to the oldest stars in the cluster [Myr]
@@ -432,16 +537,6 @@ int main (int argv, char **argc) {
 	
 		//Pair binary masses and convert to centre-of-mass particles
 		int Nstars;
-		
-		double **mbin;	//component mass & stellar evol parameter array
-		mbin = (double **)calloc(nbin[i],sizeof(double *));
-		for (j=0;j<nbin[i];j++){
-			mbin[j] = (double *)calloc(20,sizeof(double));
-			if (mbin[j] == NULL) {
-				printf("\nMemory allocation failed!\n");
-				return 0;
-			}
-		}
 
 		Nstars = N[i];
 
@@ -449,46 +544,51 @@ int main (int argv, char **argc) {
 			printf("\nPreparing binary components.\n");
 			//Specify component pairing
 			if (pairing[i]) {
-				if (pairing[i] == 1) printf("\nApplying ordered pairing for stars with masses > %.1f Msun.\n",msort[i]);
-				else if (pairing[i] == 2) printf("\nApplying random pairing for stars with masses > %.1f Msun.\n",msort[i]);
-				else if (pairing[i] == 3) printf("\nApplying uniform mass ratio distribution for stars with masses > %.1f Msun.\n",msort[i]);
-				order(star, N[i], M[i], msort[i], pairing[i], Nsub);
+				if (pairing[i] == 1 && adis[i] != 6) printf(" Applying ordered pairing for stars with masses > %.1f Msun.\n",msort[i]);
+				else if (pairing[i] == 2 && adis[i] != 6) printf(" Applying random pairing for stars with masses > %.1f Msun.\n",msort[i]);
+				else if (pairing[i] == 3 && adis[i] != 6) printf(" Applying uniform mass ratio distribution for stars with masses > %.1f Msun.\n",msort[i]);
+				if  (adis[i] == 6)  printf(" Applying uniform mass ratio distribution for all stars.\n");
+				order(star, N[i], M[i], msort[i], pairing[i], Nsub, fbin[i]);
 			} else {
 				randomize(star, N[i], Nsub);
 			}
+
 			N[i] -= nbin[i];
+
+			//printf("\nNumber of pop %i Nsub %i\n", i+1,Nsub);
 			for (j=0;j<nbin[i];j++) {
-				mbin[j][0] = star[2*j+Nsub][0]+star[2*j+1][0]; //system mass
-				mbin[j][1] = star[2*j+Nsub][0]; //primary mass
-				mbin[j][2] = star[2*j+1+Nsub][0]; //secondary mass
-				mbin[j][3] = star[2*j+Nsub][7]; //primary m0
-				mbin[j][4] = star[2*j+Nsub][8]; //primary kw
-				mbin[j][5] = star[2*j+Nsub][9]; //primary epoch1
-				mbin[j][6] = star[2*j+Nsub][10]; //primary spin
-				mbin[j][7] = star[2*j+Nsub][11]; //primary r
-				mbin[j][8] = star[2*j+Nsub][12]; //primary lum
-				mbin[j][9] = star[2*j+1+Nsub][7]; //secondary m0
-				mbin[j][10] = star[2*j+1+Nsub][8]; //secondary kw
-				mbin[j][11] = star[2*j+1+Nsub][9]; //secondary epoch1
-				mbin[j][12] = star[2*j+1+Nsub][10]; //secondary spin
-				mbin[j][13] = star[2*j+1+Nsub][11]; //secondary r
-				mbin[j][14] = star[2*j+1+Nsub][12]; //secondary lum
-				mbin[j][15] = 1000+j+Nsub; //identifier
-				mbin[j][16] = star[2*j+Nsub][13]; //primary epochstar
-				mbin[j][17] = star[2*j+1+Nsub][13]; //secondary epochstar
-				mbin[j][18] = star[2*j+Nsub][14]; //primary zstar
-				mbin[j][19] = star[2*j+1+Nsub][14]; //secondary zstar
+				mbin[j+Nbinsub][0] = star[2*j+Nsub][0]+star[2*j+Nsub+1][0]; //system mass
+				mbin[j+Nbinsub][1] = star[2*j+Nsub][0]; //primary mass
+				mbin[j+Nbinsub][2] = star[2*j+Nsub+1][0]; //secondary mass
+				mbin[j+Nbinsub][3] = star[2*j+Nsub][7]; //primary m0
+				mbin[j+Nbinsub][4] = star[2*j+Nsub][8]; //primary kw
+				mbin[j+Nbinsub][5] = star[2*j+Nsub][9]; //primary epoch1
+				mbin[j+Nbinsub][6] = star[2*j+Nsub][10]; //primary spin
+				mbin[j+Nbinsub][7] = star[2*j+Nsub][11]; //primary r
+				mbin[j+Nbinsub][8] = star[2*j+Nsub][12]; //primary lum
+				mbin[j+Nbinsub][9] = star[2*j+Nsub+1][7]; //secondary m0
+				mbin[j+Nbinsub][10] = star[2*j+Nsub+1][8]; //secondary kw
+				mbin[j+Nbinsub][11] = star[2*j+Nsub+1][9]; //secondary epoch1
+				mbin[j+Nbinsub][12] = star[2*j+Nsub+1][10]; //secondary spin
+				mbin[j+Nbinsub][13] = star[2*j+Nsub+1][11]; //secondary r
+				mbin[j+Nbinsub][14] = star[2*j+Nsub+1][12]; //secondary lum
+				mbin[j+Nbinsub][15] = 1000+j+Nsub; //identifier
+				mbin[j+Nbinsub][16] = star[2*j+Nsub][13]; //primary epochstar
+				mbin[j+Nbinsub][17] = star[2*j+Nsub+1][13]; //secondary epochstar
+				mbin[j+Nbinsub][18] = star[2*j+Nsub][14]; //primary zstar
+				mbin[j+Nbinsub][19] = star[2*j+Nsub+1][14]; //secondary zstar
 
-				star[2*j+Nsub][0] += star[2*j+1+Nsub][0]; //system mass
-				star[2*j+1+Nsub][0] = 0.0;
+				star[2*j+Nsub][0] += star[2*j+Nsub+1][0]; //system mass
+				star[2*j+Nsub+1][0] = 0.0;
 				star[2*j+Nsub][7] = 1000+j+Nsub; //identifier
-				star[2*j+1+Nsub][7] = 0.0; //identifier
-				star[2*j+Nsub][12] += star[2*j+1+Nsub][12]; //system luminosity
-				star[2*j+1+Nsub][12] = 0.0;
-			}
-			order(star, Nstars, M[i], 0.0, 0, Nsub);
-			randomize(star, N[i], Nsub);
+				star[2*j+Nsub+1][7] = 0.0; //identifier
+				star[2*j+Nsub][12] += star[2*j+Nsub+1][12]; //system luminosity
+				star[2*j+Nsub+1][12] = 0.0;
 
+			}
+
+			order(star, Nstars, M[i], 0.0, 0, Nsub, fbin[i]);
+			randomize(star, N[i], Nsub);
 		}
 
 
@@ -518,76 +618,93 @@ int main (int argv, char **argc) {
 			}
 			N[i] = Nseg;
 		}
-	
-		/*************************************
-		 * Generate positions and velocities *
-		 *************************************/
-	
-		printf("\n\n-----GENERATE POSITIONS & VELOCITIES-----   \n"); 
 
-		//calculate half-mass radius according to Marks & Kroupa 2012 if Rh is set to -1
-		if ((Rh[i] == -1) && (M[i])) {
-			Rh[i] = 0.1*pow(M[i],0.13); //Marks & Kroupa (2012), implementation by M. Kruckow
-			printf("\nUsing Marks & Kroupa (2012) relation to derive half-mass radius from cluster mass: %g (pc)\n", Rh[i]);
-		}
-	
-	
-		//evaluate approximate tidal radius assuming circular orbit
-		if (tf == 1) {
-			printf("\n Point mass tidal potential\n");
-			rtide = rbar;	
-		} else if (!tf) {
-			rtide = 1.0E5;
-		}
-		printf("\nApproximate tidal radius: %g (pc)\n", rtide);
 
-/*	//evaluate approximate tidal radius assuming circular orbit
-		if (tf == 3) {
-			//in the case of Allen & Santillan potential, assume kappa = 1.4omega (eq. 9 in Kuepper et al. 2010)
-			omega = sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2])/sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-			rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
-		} else if (!tf) {
-			rtide = 1.0E5;
-		} else if ((tf == 1) && (code == 0 || code == 4 || code == 5)) {
-			//in case of Sverre's Nbody6 standard tidal field
-			rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*8000.0;
-		} else { 
-			//in the case of a point mass potential or near field approximation
-			rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-		}
-*/	
 		//generate scaled pos & vel, postpone scaling for Plummer and King in case of mass segregation
-		double rhKing[10], rvirKing[10];
+		double rhking[10], rvirking[10], rking[10];
 		if (profile[i] == 2) {
-			printf("\nGenerating King model with parameters: N = %i\t W0 = %g\t Rh = %.3f\t D = %.2f\n",N[i], W0[i], Rh[i], D[i]);
-			generate_king(N[i], W0[i], star, &rvirKing[i], &rhKing[i], &rking[i], D[i], symmetry, Nsub);
-			rvir[i] = Rh[i]*rvirKing[i]/rking[i];
+			printf("\nGenerating King model with parameters: N = %i\t W0 = %g\t D = %.2f\n",N[i], W0[i], D[i]);
+			generate_king(N[i], W0[i], star, &rvirking[i], &rhking[i], &rking[i], D[i], symmetry, Nsub);
 		} else if (profile[i] == 3) {
 			N[i] = Nunseg;
-			printf("\nGenerating segregated Subr model with parameters: N = %i\t S = %g\t Rh = %.3f\n",N[i], S[i], Rh[i]);
-			rvir[i] = Rh[i]/0.76857063065978; //(value provided by L. Subr) 
-			generate_subr(N[i], S[i], star, rtide, rvir[i], Nsub);
-			printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir[i], Rh[i], rtide);
-		} else if (profile[i] == 4) {
-			if (gamma[i][1] == 0.0 && gamma[i][2] == 2.0) printf("\nGenerating EFF model with parameters: N = %i\t a = %.1f\t gamma = %.3f\t Rmax = %.1f\t D = %.2f\n",N[i], a[i], gamma[i][0], Rmax[i], D[i]);
-			else printf("\nGenerating Nuker model with parameters: N = %i\t a = %.1f\t gamma (outer) = %.3f\t gamma (inner) = %.3f\t transition = %.3f\t Rmax = %.1f\t D = %.2f\n",N[i], a[i], gamma[i][0],gamma[i][1],gamma[i][2], Rmax[i], D[i]);
-			double p[6];
-			p[1] = 1.0; //rho0, will be scaled according to Rmax and Mtot
-			p[2] = a[i];//scale radius
-			p[3] = gamma[i][0];//outer power-law slope (>0.5)
-			p[4] = gamma[i][1];//inner power-law slope (0.0 for EFF template)
-			p[5] = gamma[i][2];//transition parameter (2.0 for EFF template)
-			generate_profile(N[i], star, Rmax[i], M[i], p, &Rh[i], D[i], symmetry, Nsub);
-			printf("\nRh = %.1f pc\n", Rh[i]);
+			printf("\nGenerating segregated Subr model with parameters: N = %i\t S = %g\t\n",N[i], S[i]);
+			if(tf==1){
+				if(rh_mcl >= 1.0E9){
+					rvir = (0.1*rtide)/0.772764;
+				} else {
+					if(i==0){
+						double perc = Mtotal/M[i];
+						rvir = (perc)*(rh_mcl)/0.772764;
+					} else {
+						rvir = rh_mcl/0.772764;
+					} 
+				}
+			} else {
+				if(i==0){
+						double perc = Mtotal/M[i];
+					rvir = (perc)*(rh_mcl)/0.772764;
+					} else {
+					rvir = rh_mcl/0.772764;
+			}
+			}
+			//rvir[i] = Rh[i]/0.76857063065978; //(value provided by L. Subr) 
+			generate_subr(N[i], S[i], star, rtide, rvir, Nsub);
+//			printf ("\nrvir = %.5f\t rtide = %.5f (pc)\n", rvir, rtide);
+//		} else if (profile[i] == 4) {
+//			if (gamma[i][1] == 0.0 && gamma[i][2] == 2.0) printf("\nGenerating EFF model with parameters: N = %i\t a = %.1f\t gamma = %.3f\t Rmax = %.1f\t D = %.2f\n",N[i], a[i], gamma[i][0], Rmax[i], D[i]);
+//			else printf("\nGenerating Nuker model with parameters: N = %i\t a = %.1f\t gamma (outer) = %.3f\t gamma (inner) = %.3f\t transition = %.3f\t Rmax = %.1f\t D = %.2f\n",N[i], a[i], gamma[i][0],gamma[i][1],gamma[i][2], Rmax[i], D[i]);
+//			double p[6];
+//			p[1] = 1.0; //rho0, will be scaled according to Rmax and Mtot
+//			p[2] = a[i];//scale radius
+//			p[3] = gamma[i][0];//outer power-law slope (>0.5)
+//			p[4] = gamma[i][1];//inner power-law slope (0.0 for EFF template)
+//			p[5] = gamma[i][2];//transition parameter (2.0 for EFF template)
+//			generate_profile(N[i], star, Rmax[i], M[i], p, &rplum_t[i], D[i], symmetry, Nsub);
+//			printf("\nRh = %.1f pc\n", Rh[i]);
 		} else if (profile[i] == 0) {
-			printf("\nGenerating fractal distribution with parameters: N = %i\t Rh = %.3f\t D = %.2f\n", N[i], Rh[i], D[i]);
+			printf("\nGenerating fractal distribution with parameters: N = %i\t D = %.2f\n", N[i], D[i]);
 			fractalize(D[i], N[i], star, 0, symmetry, Nsub);
-			rvir[i] = Rh[i];
+			if(tf==1){
+				if(rh_mcl >= 1.0E9){
+					rvir = (0.1*rtide)/0.772764;
+				} else {
+					if(i==0){
+						double perc = Mtotal/M[i];
+						rvir = (perc)*(rh_mcl)/0.772764;
+					} else {
+						rvir = rh_mcl/0.772764;
+					} 
+				}
+			} else {
+				if(i==0){
+						double perc = Mtotal/M[i];
+					rvir = (perc)*(rh_mcl)/0.772764;
+					} else {
+					rvir = rh_mcl/0.772764;
+			}
+			}
 		} else if (profile[i] == 1) {
-			printf("\nGenerating Plummer model with parameters: N = %i\t Rh = %.3f\t D = %.2f\n", N[i], Rh[i], D[i]);
-			rvir[i] = Rh[i]/0.772764;
-			rplummer[i] = Rh[i]/1.305;
-			generate_plummer(N[i], star, rtide, rvir[i], D[i], symmetry, Qtot, Nsub);
+			printf(" Generating Plummer model with parameters: N = %i\t D = %.2f\n", N[i], D[i]);
+			if(tf == 1) {
+				if(rh_mcl >= 1.0E9){
+					rvir = (0.1*rtide)/0.772764;
+				} else {
+					if(i==0){
+						double perc = Mtotal/M[i];
+						rvir = (perc)*(rh_mcl)/0.772764;
+					} else {
+						rvir = rh_mcl/0.772764;
+					} 
+				}
+			} else {
+				if(i==0){
+						double perc = Mtotal/M[i];
+					rvir = (perc)*(rh_mcl)/0.772764;
+			} else {
+					rvir = rh_mcl/0.772764; // for no tidal field rplum = Rh
+			}
+			}
+			generate_plummer(N[i], star, rtide, rvir, D[i], symmetry, Qtot, Nsub);
 		}
 
 		//Apply Baumgardt et al. (2008) mass segregation
@@ -650,131 +767,31 @@ int main (int argv, char **argc) {
 			N[i] = Nunseg;
 		}
 
-
-		/*********************
-		 * Generate Binaries *
-		 *********************/
-	
-		printf("\n\n-----GENERATE BINARIES-----   \n"); 
-	
-		if (!nbin[i]) {
-			printf("\nNo primordial binaries!\n");
-		} else {
-			//re-create original array with Nstars (original N) entries
-			columns = 15;
-			double **star_temp_bin;
-			star_temp_bin = (double **)calloc(Nstars,sizeof(double *));
-			for (j=0;j<Nstars;j++){
-				star_temp_bin[j] = (double *)calloc(columns,sizeof(double));
-				if (star_temp_bin[j] == NULL) {
-					printf("\nMemory allocation failed!\n");
-					return 0;
-				}
-			}
-			double **mbin_index; //sort mbin by identifier
-			mbin_index = (double **)calloc(nbin[i],sizeof(double *));
-			for (j=0;j<nbin[i];j++){
-				mbin_index[j] = (double *)calloc(2,sizeof(double));
-				if (mbin_index[j] == NULL) {
-					printf("\nMemory allocation failed!\n");
-					return 0;
-				}
-			}
-
-
-			for (j=0;j<nbin[i];j++) {
-				mbin_index[j][0] = mbin[j][15];
-				mbin_index[j][1] = j;
-			}
-			shellsort(mbin_index,nbin[i],2);
-			double **star_index;//sort star by identifier
-			star_index = (double **)calloc(N[i],sizeof(double *));
-			for (j=0;j<N[i];j++){
-				star_index[j] = (double *)calloc(2,sizeof(double));
-				if (star_index[j] == NULL) {
-					printf("\nMemory allocation failed!\n");
-					return 0;
-				}
-			}
-
-			for (j=0;j<N[i];j++) {
-				star_index[j][0] = star[j+Nsub][7];
-				star_index[j][1] = j+Nsub;
-			}
-			shellsort(star_index,N[i],2);
-			int p;
-			for (j=0;j<nbin[i];j++) {
-				if (mbin[(int) mbin_index[j][1]][15] == star[(int) star_index[j][1]][7]) {
-					star_temp_bin[2*j][0] = mbin[(int) mbin_index[j][1]][1]/(1.0*M[i]);//primary mass
-					star_temp_bin[2*j+1][0] = mbin[(int) mbin_index[j][1]][2]/(1.0*M[i]);//secondary mass
-					star_temp_bin[2*j][7] = mbin[(int) mbin_index[j][1]][3];//primary m0
-					star_temp_bin[2*j+1][7] = mbin[(int) mbin_index[j][1]][9];//secondary m0
-					star_temp_bin[2*j][8] = mbin[(int) mbin_index[j][1]][4];//primary kw
-					star_temp_bin[2*j+1][8] = mbin[(int) mbin_index[j][1]][10];//secondary kw
-					star_temp_bin[2*j][9] = mbin[(int) mbin_index[j][1]][5];//primary epoch
-					star_temp_bin[2*j+1][9] = mbin[(int) mbin_index[j][1]][11];//secondary epoch
-					star_temp_bin[2*j][10] = mbin[(int) mbin_index[j][1]][6];//primary spin
-					star_temp_bin[2*j+1][10] = mbin[(int) mbin_index[j][1]][12];//secondary spin
-					star_temp_bin[2*j][11] = mbin[(int) mbin_index[j][1]][7];//primary r
-					star_temp_bin[2*j+1][11] = mbin[(int) mbin_index[j][1]][13];//secondary r
-					star_temp_bin[2*j][12] = mbin[(int) mbin_index[j][1]][8];//primary lum
-					star_temp_bin[2*j+1][12] = mbin[(int) mbin_index[j][1]][14];//secondary lum				
-					star_temp_bin[2*j][13] = mbin[(int) mbin_index[j][1]][16];//primary epochstar
-					star_temp_bin[2*j+1][13] = mbin[(int) mbin_index[j][1]][17];//secondary epochstar				
-					star_temp_bin[2*j][14] = mbin[(int) mbin_index[j][1]][18];//primary Zstar
-					star_temp_bin[2*j+1][14] = mbin[(int) mbin_index[j][1]][19];//secondary Zstar				
-					for (p=1;p<7;p++) {
-						star_temp_bin[2*j][p] = star[(int) star_index[j][1]][p];
-						star_temp_bin[2*j+1][p] = star[(int) star_index[j][1]][p];
-					}
-				}
-			}
-
-			for (j=nbin[i];j<N[i];j++) {
-				for (p=0;p<columns;p++) {
-					star_temp_bin[j+nbin[i]][p] = star[(int) star_index[j][1]][p];
-				}
-			}
-
-			N[i] += nbin[i];
-			for (j=0;j<N[i];j++) 
-				for (p=0;p<columns;p++) star[j+Nsub][p] = star_temp_bin[j][p]; //copy temporary array back to original
-		
-			for (j=0;j<Nstars;j++) free (star_temp_bin[j]);
-			free(star_temp_bin);
-
-			printf("\nCreating %i primordial binary systems, fraction: %6.2f percent.\n", nbin[i], 2.0*nbin[i]/N[i]*100.0);
-			if (seed) srand48(seed);
-			get_binaries(nbin[i], star, M[i], rvir[i], pairing[i], &N[i], adis[i], amin[i], amax[i], Rh[i], eigen[i], BSE, epoch[i], Z[i], remnant, OBperiods[i], msort[i], Nsub, Nbinsub, eccbinaries, abinaries, cmb);
-		} 
-
-
-		free(Mcum);
-		for (j=0;j<nbin[i];j++) free (mbin[j]);
-		free(mbin);
-
-
-
 //		tscale = sqrt(rvir[i]*rvir[i]*rvir[i]/(G*M[i]));
 //		vscale[i] = rvir[i]/tscale;
-		for (j=0; j<N[i]; j++) { //distance scaled to the relative ratio with the first generation scaling factor
-			for (k=1;k<4;k++)
-				star[j+Nsub][k] *= rvir[i]/rvir[0];
-		}
+//		for (j=0; j<N[i]; j++) { //distance scaled to the relative ratio with the first generation scaling factor
+//			for (k=1;k<4;k++)
+//				star[j+Nsub][k] *= rvir[i]/rvir[0];
+//		}
 	
 //		for (j=0; j<N[i]; j++) {
 //			for (k=4;k<7;k++)
 //				star[j+Nsub][k] *= vscale[i]/vscale[0];
 //		}
 
-		Mtotal += M[i];
+		if (i>0) {
+			printf(" Scaling %i population by %f\n",i+1,conc_pop[i-1]);
+			for (j=0; j<N[i]; j++) { //distance scaled to the relative ratio with the first generation scaling factor
+				for (k=1;k<4;k++)
+					star[j+Nsub][k] *= conc_pop[i-1];
+			} 
+		}
 
-		for (j=0;j<N[i];j++) star[j+Nsub][0] *= M[i];
+		for (j=0;j<N[i];j++) {
+			star[j+Nsub][0] *= M[i];
+		}
+		free(Mcum);
 	} //END CICLE FOR GENERATE POSITION FOR MULTIPLE POPULATIONS
-
-	for(j=0;j<numberofpop;j++) printf("\n Mass %i generation: \t%.3f\n", j+1, M[j]);
-	printf("\nTotal mass %.3f\n",Mtotal);
-	double Rhtot = Rh[0];
 
 //copy star_array to re-order it according to radial distance
 // star_temp array will be used for jeans equation solution and for spherical simmetry scaling in N-body units
@@ -788,53 +805,59 @@ int main (int argv, char **argc) {
 		}
 	}
 
+	int j_star = 0;
 	for (j=0;j<Ntot;j++) {
-		star_temp[j][0] = star[j][0]/Mtotal;
-		star_temp[j][1] = star[j][1];
-		star_temp[j][2] = star[j][2];
-		star_temp[j][3] = star[j][3];
-		star_temp[j][4] = 0.0;
-		star_temp[j][5] = 0.0;
-		star_temp[j][6] = 0.0;
-		star_temp[j][7] = 0.0; //radius
-		star_temp[j][8] = 0.0; //u(i)
-		star_temp[j][9] = 0.0; //cumulative mass
-		star_temp[j][10] = j; //star index
+		if(star[j][0] != 0.0){
+			star_temp[j_star][0] = star[j][0]/Mtotal;
+			star_temp[j_star][1] = star[j][1];
+			star_temp[j_star][2] = star[j][2];
+			star_temp[j_star][3] = star[j][3];
+			star_temp[j_star][4] = 0.0;
+			star_temp[j_star][5] = 0.0;
+			star_temp[j_star][6] = 0.0;
+			star_temp[j_star][7] = 0.0; //radius
+			star_temp[j_star][8] = 0.0; //u(i)
+			star_temp[j_star][9] = 0.0; //cumulative mass
+			star_temp[j_star][10] = j; //star index
+			j_star =  j_star + 1;
+		}
 	}
-
-	radial_distance_order(star_temp,Ntot);
+	radial_distance_order(star_temp,j_star);
 
 	/*******************
 	 * JEANS EQUATION * 
 	 ******************/
 //CALL JEANS EQUATION TO OBTAIN STARS' VELOCITIES (ONLY FOR MSP)
+
 	if(numberofpop>1){
+		double *volume, *radius, *rho, *cummass,mommass;
+		volume = (double *)calloc(Ntot,sizeof(double));
+		radius = (double *)calloc(Ntot,sizeof(double));
+		rho = (double *)calloc(Ntot,sizeof(double));
+		cummass = (double *)calloc(Ntot,sizeof(double));
 
-		double volume[Ntot], radius[Ntot], rho[Ntot], cummass[Ntot], mommass;
-
-		for (j=0;j<Ntot;j++) {
+		for (j=0;j<j_star;j++) {
 				volume[j] =  4.0/3.0*PI*pow(star_temp[j][7],3); //volume
 		}
 
-		for (j=0;j<Ntot;j++) {
+		for (j=0;j<j_star;j++) {
 			mommass += star_temp[j][0];
 			cummass[j] = mommass; //cumulative mass
 			rho[j] = cummass[j]/volume[j]; //mass density
 			radius[j] = star_temp[j][7]; //radius
-			if (cummass[j] >= 0.5) Rhtot = radius[j];
 		}
 
 		FILE *inputJE;
 		inputJE = fopen("inputJE.txt","w"); //input values for jeans equation
-		fprintf(inputJE,"%i\n",Ntot);
+		fprintf(inputJE,"%i\n",j_star);
 		fprintf(inputJE,"%i\n",seed);
-		for (j=0;j<Ntot;j++) {
+		for (j=0;j<j_star;j++) {
 			fprintf(inputJE,"%.6f %.6f %.6f\n",rho[j],cummass[j],radius[j]);
 		}
 		fclose(inputJE);
+		free(volume), free(radius),free(rho),free(cummass);
 
-		system("python jeans_solutions.py"); //solving jeans equation
-
+		system("/home/agostino/python-virtualenvs/myenv2.7/bin/python jeans_solutions.py"); //solving jeans equation
 		FILE *outputJE;
 		outputJE = fopen("outputJE.txt","r");
 		float vel_x_mom, vel_y_mom, vel_z_mom;
@@ -852,11 +875,11 @@ int main (int argv, char **argc) {
 		}
 		fclose(outputJE);
 
-		for (j=0;j<Ntot;j++) {	//copying back to original array
-			star[(int) star_temp[j][10]][4] = star_temp[j][4];
-			star[(int) star_temp[j][10]][5] = star_temp[j][5];
-			star[(int) star_temp[j][10]][6] = star_temp[j][6];
-		}
+		for (j=0;j<j_star;j++) {	//copying back to original array
+				star[(int) star_temp[j][10]][4] = star_temp[j][4];
+				star[(int) star_temp[j][10]][5] = star_temp[j][5];
+				star[(int) star_temp[j][10]][6] = star_temp[j][6];
+			}			
 		system("rm inputJE.txt outputJE.txt");
 	}
 
@@ -878,17 +901,40 @@ int main (int argv, char **argc) {
 
 
 //re-assigne star_temp positions and velocities with centre-of-mass corrections
+	j_star = 0;
 	for (j=0;j<Ntot;j++) {
-		star_temp[j][1] = star[j][1];
-		star_temp[j][2] = star[j][2];
-		star_temp[j][3] = star[j][3];
-		star_temp[j][4] = star[j][4];
-		star_temp[j][5] = star[j][5];
-		star_temp[j][6] = star[j][6];
-		star_temp[j][7] = 0.0; //radius
+		if(star[j][0] != 0.0){
+			star_temp[j_star][0] = star[j][0]/Mtotal;
+			star_temp[j_star][1] = star[j][1];
+			star_temp[j_star][2] = star[j][2];
+			star_temp[j_star][3] = star[j][3];
+			star_temp[j_star][4] = 0.0;
+			star_temp[j_star][5] = 0.0;
+			star_temp[j_star][6] = 0.0;
+			star_temp[j_star][7] = 0.0; //radius
+			star_temp[j_star][8] = 0.0; //u(i)
+			star_temp[j_star][9] = 0.0; //cumulative mass
+			star_temp[j_star][10] = j; //star index
+			j_star =  j_star + 1;
+		}
+	}
+	radial_distance_order(star_temp,j_star);
+
+	/***********
+	 * Scaling * 
+	 ***********/
+	printf("\n\n-----SCALING-----      \n"); 
+
+	if (!units) {
+		printf("\nScaling in Nbody units.\n");
 	}
 
-	radial_distance_order(star_temp,Ntot);
+//		if (!(code == 3 && units)) {
+//	if (extmass) extmass /= Mtot;
+//	if (extrad) extrad /= rvir[i];
+//	if (extdecay) extdecay = 1.0/(extdecay/tscale);
+//	if (extstart) extstart = extstart/tscale;
+//		}
 
 	if(!pot_energy_MOCCA){
 	//apply scaling to Nbody-units
@@ -942,15 +988,17 @@ int main (int argv, char **argc) {
 			star[i][5] *= sv;
 			star[i][6] *= sv;
 		}
-		printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir[0], Rhtot*rvir[0], rtide);
+		//printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
 	}
 
 
+	double sx = 0.0;
+	double sv = 0.0;
 	if (pot_energy_MOCCA){ 
 			printf("\nEnergy calculated supposing spherical symmetry\n");
 
 			double Mtot = 0.0;
-			for (j=0;j<Ntot;j++){
+			for (j=0;j<j_star;j++){
 				Mtot = Mtot + star_temp[j][0];
 				star_temp[j][9] = Mtot;
 			}
@@ -958,10 +1006,10 @@ int main (int argv, char **argc) {
 			double rx = 0.0;
 			double ux = 0.0;
 			double uy = 0.0;
-			rx = star_temp[Ntot-1][7];
+			rx = star_temp[j_star-1][7];
 			ux = -Mtot/rx;
-			star_temp[Ntot-1][8] = ux;
-			for (j=Ntot-2;j>-1;j--){
+			star_temp[j_star-1][8] = ux;
+			for (j=j_star-2;j>-1;j--){
 				Mtot = Mtot - star_temp[j+1][0];
 				ux = -Mtot/star_temp[j][7];
 				uy = uy - star_temp[j+1][0]/rx;
@@ -970,13 +1018,11 @@ int main (int argv, char **argc) {
 			}
 			double ke = 0.0;
 			double pe = 0.0;
-			for (j=0;j<Ntot;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
+			for (j=0;j<j_star;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
 			pe *= -1.0;
-			for (j=0;j<Ntot;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
+			for (j=0;j<j_star;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
 
 			printf("\nRe-scaling of orbits (dt ~ N!)\n");
-			double sx = 0.0;
-			double sv = 0.0;
 			sx = 1.0/(4*(Qtot-1)*pe);
 			sv = sqrt(-Qtot/(4*(Qtot-1)*ke));
 			for (j=0;j<Ntot;j++) {
@@ -987,7 +1033,60 @@ int main (int argv, char **argc) {
 				star[j][5] *= sv;
 				star[j][6] *= sv;
 			}
-		printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir[0], Rhtot*rvir[0], rtide);
+		//printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
+	}
+	printf("\nAfter re-scaling orbits, rescaling factors sx %f, sv %f\n",sx,sv);
+
+	j_star = 0;
+	for (j=0;j<Ntot;j++) {
+		if(star[j][0] != 0.0){
+			star_temp[j_star][0] = star[j][0]/Mtotal;
+			star_temp[j_star][1] = star[j][1];
+			star_temp[j_star][2] = star[j][2];
+			star_temp[j_star][3] = star[j][3];
+			star_temp[j_star][4] = 0.0;
+			star_temp[j_star][5] = 0.0;
+			star_temp[j_star][6] = 0.0;
+			star_temp[j_star][7] = 0.0; //radius
+			star_temp[j_star][8] = 0.0; //u(i)
+			star_temp[j_star][9] = 0.0; //cumulative mass
+			star_temp[j_star][10] = j; //star index
+			j_star = j_star + 1;
+		}
+	}
+	radial_distance_order(star_temp,j_star);
+
+	double *cummass,mommass=0.0,Rhtot;
+	cummass = (double *)calloc(Ntot,sizeof(double));
+
+	for (j=0;j<j_star;j++) {
+		mommass += star_temp[j][0];
+		cummass[j] = mommass; //cumulative mass	
+	}
+	for (j=0;j<j_star;j++) {
+		if (cummass[j] >= 0.5){
+			Rhtot = star_temp[j][7];
+			break;
+		}
+	}
+	free(cummass);
+
+	double last_star;
+	last_star = star_temp[j_star-1][7];
+
+	if(tf == 1){
+		if(rh_mcl > 1.0E9){
+			printf(" Tidally filling model\n");
+			rvir = rtide/last_star;
+			printf(" rvir =  %f Rhtot = %f rtide = %f (pc)\n",rvir,Rhtot*rvir,last_star*rvir);
+		} else {
+			printf(" Tidally underfilling model\n");
+			rvir = rh_mcl/Rhtot;
+			printf(" rvir = %f Rhtot = %f Rlast  = %f rtide = %f (pc)\n",rvir,Rhtot*rvir,last_star*rvir,rtide);
+		}
+	} else {
+		rvir = rh_mcl/Rhtot;
+		printf(" rvir = %f Rhtot = %f Rlast  = %f rtide = %f (pc)\n",rvir,Rhtot*rvir,last_star*rvir,rtide);
 	}
 
 	for (j=0;j<Ntot;j++) free (star_temp[j]);
@@ -1002,49 +1101,22 @@ int main (int argv, char **argc) {
 #endif
 	bin = 4; //KZ(22)
 
+	/*********************
+	 * Generate Binaries *
+	 *********************/
+	if (seed) srand48(seed);
 
-	/***********
-	 * Scaling * 
-	 ***********/
-	printf("\n\n-----SCALING-----      \n"); 
-
-	if (!units) {
-		printf("\nScaling in Nbody units.\n");
-	}
-/*	else{		
-		printf("\nScaling to astrophysical units.\n");
-		for (j=0; j<N; j++) star[j][0] *= M;
-
-		for (j=0; j<N; j++) {
-			for (i=1;i<4;i++)
-				star[j][i] *= rvir;
+	if(eigen[i]) {
+		double massbefore=0.0;
+		for (j=0;j<Ntot;j++){
+			massbefore += star[j][0];
 		}
-	
-		for (j=0; j<N; j++) {
-			for (i=4;i<7;i++)
-				star[j][i] *= rvir/tscale;
-		}
-		bin = -1; //KZ(22)
-
-	if (!(code == 3 && units)) {
-		if (extmass) extmass /= Mtot;
-		if (extrad) extrad /= rvir[i];
-		if (extdecay) extdecay = 1.0/(extdecay/tscale);
-		if (extstart) extstart = extstart/tscale;
+		printf("Total mass before  eigenevolution = %f\n", massbefore);
 	}
-*/
-
-
-//SAVING COMPONENTS
-
-	FILE *singles;
-	singles = fopen("single_nbody.dat","w");
-
-    FILE *binaries;
-	binaries = fopen("binary_nbody.dat","w");
+	printf("\n\n-----GENERATE BINARIES-----   \n"); 
 	for (i=0;i<numberofpop;i++){ 
-
-//used to change the correct star array
+	
+//used to change the correct star array; star_array will be constructed as: Nbinaries_1_gen, Nsingle_1_gen, Nbinaries_2_gen, Nsingle_2_gen, ..
 		if (i == 0){
 			Nsub = 0;
 			Nbinsub = 0;
@@ -1052,27 +1124,215 @@ int main (int argv, char **argc) {
 			Nsub += N[i-1];
 			Nbinsub += nbin[i-1];
 		}
-		
-		fprintf(singles,"%f\n",rvir[0]);
-		fprintf(binaries,"%f\n",rvir[0]);
 
-		for (j=0;j<nbin[i];j++){
-			fprintf(binaries,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%i\t%i\n",eccbinaries[j+Nbinsub], abinaries[j+Nbinsub], star[2*j+Nsub][0], star[2*j+1+Nsub][0], cmb[j+Nbinsub][0], cmb[j+Nbinsub][1], cmb[j+Nbinsub][2], cmb[j+Nbinsub][3], cmb[j+Nbinsub][4], cmb[j+Nbinsub][5], i+1, i+1);
-		}
-		for (j=nbin[i]*2;j<N[i];j++) {
-			fprintf(singles,"%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%i\n",star[j+Nsub][0], star[j+Nsub][1], star[j+Nsub][2], star[j+Nsub][3], star[j+Nsub][4], star[j+Nsub][5], star[j+Nsub][6], i+1);
-		}
-	
+		if (!nbin[i]) {
+			printf("\nNo primordial binaries for population number %i!\n",i+1);
+		} else {
+
+			//re-create original array with original N[i] entries
+			int Nstar = N[i] + nbin[i];
+			columns = 15;
+			double **star_temp_bin;
+			star_temp_bin = (double **)calloc(Nstar,sizeof(double *));
+			for (j=0;j<Nstar;j++){
+				star_temp_bin[j] = (double *)calloc(columns,sizeof(double));
+				if (star_temp_bin[j] == NULL) {
+					printf("\nMemory allocation failed!\n");
+					return 0;
+				}
+			}
+			double **mbin_index; //sort mbin by identifier
+			mbin_index = (double **)calloc(nbin[i],sizeof(double *));
+			for (j=0;j<nbin[i];j++){
+				mbin_index[j] = (double *)calloc(2,sizeof(double));
+				if (mbin_index[j] == NULL) {
+					printf("\nMemory allocation failed!\n");
+					return 0;
+				}
+			}
+
+			for (j=0;j<nbin[i];j++) {
+				mbin_index[j][0] = mbin[j+Nbinsub][15];
+				mbin_index[j][1] = j+Nbinsub;
+			}
+			shellsort(mbin_index,nbin[i],2);
+
+			double **star_index;//sort star by identifier
+			star_index = (double **)calloc(N[i],sizeof(double *));
+			for (j=0;j<N[i];j++){
+				star_index[j] = (double *)calloc(2,sizeof(double));
+				if (star_index[j] == NULL) {
+					printf("\nMemory allocation failed!\n");
+					return 0;
+				}
+			}
+
+			for (j=0;j<N[i];j++) {
+				star_index[j][0] = star[j+Nsub][7];
+				star_index[j][1] = j+Nsub;
+			}
+			shellsort(star_index,N[i],2);
+
+			int p;
+			for (j=0;j<nbin[i];j++) {
+				if (mbin[(int) mbin_index[j][1]][15] == star[(int) star_index[j][1]][7]) {
+					star_temp_bin[2*j][0] = mbin[(int) mbin_index[j][1]][1];//primary mass
+					star_temp_bin[2*j+1][0] = mbin[(int) mbin_index[j][1]][2];//secondary mass
+					star_temp_bin[2*j][7] = mbin[(int) mbin_index[j][1]][3];//primary m0
+					star_temp_bin[2*j+1][7] = mbin[(int) mbin_index[j][1]][9];//secondary m0
+					star_temp_bin[2*j][8] = mbin[(int) mbin_index[j][1]][4];//primary kw
+					star_temp_bin[2*j+1][8] = mbin[(int) mbin_index[j][1]][10];//secondary kw
+					star_temp_bin[2*j][9] = mbin[(int) mbin_index[j][1]][5];//primary epoch
+					star_temp_bin[2*j+1][9] = mbin[(int) mbin_index[j][1]][11];//secondary epoch
+					star_temp_bin[2*j][10] = mbin[(int) mbin_index[j][1]][6];//primary spin
+					star_temp_bin[2*j+1][10] = mbin[(int) mbin_index[j][1]][12];//secondary spin
+					star_temp_bin[2*j][11] = mbin[(int) mbin_index[j][1]][7];//primary r
+					star_temp_bin[2*j+1][11] = mbin[(int) mbin_index[j][1]][13];//secondary r
+					star_temp_bin[2*j][12] = mbin[(int) mbin_index[j][1]][8];//primary lum
+					star_temp_bin[2*j+1][12] = mbin[(int) mbin_index[j][1]][14];//secondary lum				
+					star_temp_bin[2*j][13] = mbin[(int) mbin_index[j][1]][16];//primary epochstar
+					star_temp_bin[2*j+1][13] = mbin[(int) mbin_index[j][1]][17];//secondary epochstar				
+					star_temp_bin[2*j][14] = mbin[(int) mbin_index[j][1]][18];//primary Zstar
+					star_temp_bin[2*j+1][14] = mbin[(int) mbin_index[j][1]][19];//secondary Zstar				
+					for (p=1;p<7;p++) {
+						star_temp_bin[2*j][p] = star[(int) star_index[j][1]][p];
+						star_temp_bin[2*j+1][p] = star[(int) star_index[j][1]][p];
+					}
+				}
+			}
+
+			for (j=nbin[i];j<N[i];j++) {
+				for (p=0;p<columns;p++) {
+					star_temp_bin[j+nbin[i]][p] = star[(int) star_index[j][1]][p];
+				}
+			}
+
+			N[i] += nbin[i];
+			for (j=0;j<N[i];j++) 
+				for (p=0;p<columns;p++) star[j+Nsub][p] = star_temp_bin[j][p]; //copy temporary array back to original
+		
+			for (j=0;j<N[i];j++) free (star_temp_bin[j]);
+			free(star_temp_bin);
+
+			printf("\nCreating %i primordial binary systems, fraction: %6.2f percent for population number %i.\n", nbin[i], 2.0*nbin[i]/N[i]*100.0,i+1);
+
+			//change pairing, adis and OBperiods for eigenevolution
+			if( (adis[i] == 3) && (eigen[i] == 0) ) {
+				OBperiods[i] = 1;
+			}
+
+			if(adis[i] == 6) {
+				OBperiods[i] = 1;
+				msort[i] = 5.0; // restore to 5MSun to have Sana et al (2012) period distribution
+				eigen[i] = 0;
+			}
+
+			if(eigen[i] == 1){
+				pairing[i] = 1;
+				adis[i] = 2;
+			}
+			if(eigen[i] == 2){
+				pairing[i] = 3;
+				adis[i] = 3;
+				OBperiods[i] = 1;
+			}
+
+			// verify amin and amax for binaries
+
+			if(amin[i] > 0.0){
+				amin[i] *= RSUN2PC_MC;
+			} else {
+				double mlowest = MMAX; //search lowest mass star
+				for (j=0;j<Ntot;j++) {
+					if (star[j][0] < mlowest) mlowest = star[j][0];
+				}
+				double radlowest;
+				standalone_rzamsf(mlowest,&radlowest);
+				amin[i] *= -(radlowest)*RSUN2PC_MC;
+			}
+		
+			if(amax[i] > 0.0){
+				amax[i] *= RSUN2PC_MC;
+			} else {
+				amax[i] *= -2.5*Rhtot*rvir/Ntot;
+			}
+
+			get_binaries(nbin[i], star, M[i], rvir, pairing[i], &N[i], adis[i], amin[i], amax[i], Rhtot*rvir, Ntot, eigen[i], BSE, epoch[i], Z[i], remnant, OBperiods[i], msort[i], Nsub, Nbinsub,eccbinaries, abinaries, cmb);
+		} 
+
 	}
 
+	if(eigen[i]) {
+		double massafter=0.0;
+		for (j=0;j<Ntot;j++){
+			massafter += star[j][0];
+		}
+		printf("Total mass after  eigenevolution = %f\n", massafter);
+	}
+	for (j=0;j<Nbintot;j++) free (mbin[j]);
+	free(mbin);
 
+	//SAVING COMPONENTS
+	if (outputfor == 0) {
+		FILE *sinmocca;
+		sinmocca = fopen("single_nbody.dat","w");
+		FILE *binmocca;
+		binmocca = fopen("binary_nbody.dat","w");
+		for (i=0;i<numberofpop;i++){ 
 
+	//used to change the correct star array
+			if (i == 0){
+				Nsub = 0;
+				Nbinsub = 0;
+				fprintf(sinmocca,"%f %f %f %f %f\n",sx,sv,rvir,Rhtot,rtide/rvir);
+				fprintf(binmocca,"%f %f %f %f %f\n",sx,sv,rvir,Rhtot,rtide/rvir);
+			} else {
+				Nsub += N[i-1];
+				Nbinsub += nbin[i-1];
+			}
+			
+			for (j=0;j<nbin[i];j++){
+				fprintf(binmocca,"%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%f\t%f\t%d\n",eccbinaries[j+Nbinsub], abinaries[j+Nbinsub], star[2*j+Nsub][0], star[2*j+1+Nsub][0], cmb[j+Nbinsub][0], cmb[j+Nbinsub][1], cmb[j+Nbinsub][2], cmb[j+Nbinsub][3], cmb[j+Nbinsub][4], cmb[j+Nbinsub][5], epoch[i],Z[i],i+1);
+			}	
+
+			for (j=nbin[i]*2;j<N[i];j++) {
+				fprintf(sinmocca,"%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%f\t%f\t%d\n",star[j+Nsub][0], star[j+Nsub][1], star[j+Nsub][2], star[j+Nsub][3], star[j+Nsub][4], star[j+Nsub][5], star[j+Nsub][6], epoch[i],Z[i],i+1);
+			}
+		}
+		fclose(sinmocca);
+		fclose(binmocca);
+		printf("\nData written to single_nbody.dat and binary_nbody.dat\n");
+	} else {
+		//scale masses, pos & vel to astrophysical units or Nbody units
+		tscale = sqrt(rvir*rvir*rvir/(G*Mtotal)); // to be consistent with old M
+
+		for (j=0; j<Ntot; j++) {
+			for (i=1;i<4;i++)
+				star[j][i] *= rvir;
+		}
+	
+		for (j=0; j<Ntot; j++) {
+			for (i=4;i<7;i++)
+				star[j][i] *= rvir/tscale;
+		}
+	
+		char *tablefile = "dat.10";
+		FILE *TABLE;
+	
+		TABLE = fopen(tablefile,"w");
+		fprintf(TABLE,"#Mass_[Msun]\tx_[pc]\t\t\ty_[pc]\t\t\tz_[pc]\t\t\tvx_[km/s]\t\tvy_[km/s]\t\tvz_[km/s]\n");
+		for (j=0;j<Ntot;j++) {
+			fprintf(TABLE,"%8lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
+		}	
+		fclose(TABLE);
+		printf("\nData written to %s\n", tablefile);
+	}
 	/**********************
 	 * Final energy check *
 	 **********************/
 
 	printf("\n\n-----FINISH-----  \n"); 
-
+/*
 	if (check) {
 		printf("\nMaking final energy check... (may take a while but can be aborted by pressing CTRL+c)\n");
 #ifndef NOOMP
@@ -1104,7 +1364,7 @@ int main (int argv, char **argc) {
 
 	
 
-
+*/	
 #ifdef NOOMP
 	t2 = clock();														//stop stop-watch
 	printf("\nElapsed time: %g sec\n",(double)(t2-t1)/CLOCKS_PER_SEC);	//print stopped time	
@@ -1123,9 +1383,6 @@ int main (int argv, char **argc) {
 
 	free(eccbinaries);
 	free(abinaries);
-
-	fclose(singles);
-	fclose(binaries);
 	return 0;
 }
 
@@ -1162,10 +1419,10 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 	double vesc;	//escape velocity of cluster
 	int lostremnants = 0; //number of ejected compact remnants
 	double lostremnantsmass = 0.0; //mass of ejected compact remnants
-	if (Mcl && remnant && (Rh != -1)) {
+	if (Mcl && remnant && (Rh != -2)) {
 		vesc = sqrt(2.0*G*Mcl/Rh);
 		printf("Escape velocity of cluster = %.4f km/s\n", vesc);
-	} else if ((!remnant) || (Rh == -1)) {
+	} else if ((!remnant) || (Rh == -2)) {
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
@@ -1177,7 +1434,7 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 
 	printf("\nSetting up stellar population with Z = %.4f.\n",Z);
 	
-	if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
+	//if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
 	
 	//set up mass function parameters
 	ty = 2;   
@@ -1301,10 +1558,10 @@ int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, d
 	double vesc;	//escape velocity of cluster
 	int lostremnants = 0; //number of ejected compact remnants
 	double lostremnantsmass = 0.0; //mass of ejected compact remnants
-	if (Mcl && remnant && (Rh != -1)) {
+	if (Mcl && remnant && (Rh != -2)) {
 		vesc = sqrt(2.0*G*Mcl/Rh);
 		printf("Escape velocity of cluster = %.4f km/s\n", vesc);
-	} else if ((!remnant) || (Rh == -1)) {
+	} else if ((!remnant) || (Rh == -2)) {
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
@@ -1317,7 +1574,7 @@ int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, d
 		
 	printf("\nSetting up stellar population with Z = %.4f.\n",Z);
 	
-	if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
+	//if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
 	
 	double tmp, ml, mup;
 	double mostmassive = 0.0;
@@ -1551,10 +1808,10 @@ int generate_m4(int *N, double **star, double alpha, double beta, double mu,  do
 	B_u = betain(x, a, b, beta_log, &ifault)*exp(beta_log);
 	mth = mu*(1.0-beta)*(B_u - B_l)/(G_u - G_l) ;
 	
-	if (Mcl && remnant && (Rh != -1)) {
+	if (Mcl && remnant && (Rh != -2)) {
 		vesc = sqrt(2.0*G*Mcl/Rh);
 		printf("Escape velocity of cluster = %.4f km/s\n", vesc);
-	} else if ((!remnant) || (Rh == -1)) {
+	} else if ((!remnant) || (Rh == -2)) {
 		vesc = 1.0E10;
 		printf("Keeping all compact remnants\n");
 	} else {
@@ -1566,7 +1823,7 @@ int generate_m4(int *N, double **star, double alpha, double beta, double mu,  do
 	
 	printf("\nSetting up stellar population with Z = %.4f.\n",Z);
 	
-	if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
+	//if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
 	
 	if (!*N) {
 		*N = max(floor((Mcl-mup)/mth), 1);
@@ -2210,6 +2467,8 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 				}
 			} else {
 				printf("radius too big\n");
+               			w =-1;
+		                return 0;
 			}
 		
 			vmax = sqrt(2.0*w);
@@ -2371,7 +2630,7 @@ int odeint(double ystart0, double ystart1, double x1, double x2, double den, int
 		derivs(x,y,dydx,den); //find derivative
 		
 		for (j=0;j<2;j++) {
-			yscal[j] = fabs(y[j])+sqrt(h*dydx[j])+TINY;  //advance y1 and y2
+			yscal[j] = fabs(y[j])+fabs(h*dydx[j])+TINY;  //advance y1 and y2
 		}
 		
 		if (fabs(x-xsav) > fabs(DXSAV)) {
@@ -2466,7 +2725,7 @@ int rkqc(double *y,double *dydx, double *x, double *h, double den, double *yscal
 		errmax = 0.0;
 		for (i=0;i<2;i++) {
 			ytemp[i] = y[i] - ytemp[i];
-			errmax = max(errmax, sqrt(pow(ytemp[i]/yscal[i],2)));
+			errmax = max(errmax, fabs(ytemp[i]/yscal[i]));
 		}
 		errmax /= TOL;
 		if (errmax > 1.0) *h = safety**h*(pow(errmax,pshrnk)); //if integration error is too large, decrease h
@@ -3497,17 +3756,43 @@ double fractalize(double D, int N, double **star, int radial, int symmetry, int 
 	return 0;
 }
 
-int get_binaries(int nbin, double **star, double M, double rvir, int pairing, int *N, int adis, double amin, double amax, double Rh, int eigen, int BSE, double epoch, double Z, int remnant, int OBperiods, double msort, int N2, int N3, double *eccbinaries, double *abinaries, double **cmb) {		
+int standalone_rzamsf(double m, double *radius){
+/*
+*     A function to evaluate a RADIUSof zero age MS star
+*     (from Tout et al., 1996, MNRAS, 281, 257 ).
+*/
+
+      double a[9];
+
+      a[0] = 1.715359;
+      a[1] = 6.597788;
+      a[2] = 10.08855;
+      a[3] = 1.012495;
+      a[4] = 0.07490166;
+      a[5] = 0.010774220;
+      a[6] = 3.082234;
+      a[7] = 17.84778;
+      a[8] = 0.00022582;
+
+      *radius = ( a[0]*(pow(m,2.5)) + a[1]*(pow(m,6.5)) + a[2]*(pow(m,11)) + a[3]*(pow(m,19)) + a[4]*(pow(m,19.5)) ) / ( a[5] + a[6]*(pow(m,2))+ a[7]*(pow(m,8.5)) + pow(m,18.5) + a[8]*(pow(m,19.5)) );
+      return 0;
+}
+
+int get_binaries(int nbin, double **star, double M, double rvir, int pairing, int *N, int adis, double amin, double amax, double Rh, int Ntot, int eigen, int BSE, double epoch, double Z, int remnant, int OBperiods, double msort, int N2, int N3, double *eccbinaries, double *abinaries, double **cmb){		
 	int i, j, k;
-	double m1, m2, ecc, abin;
+	double m1 = 0.0, m2 = 0.0, ecc, abin,rad1,rad2;
 	double eccold, abinold, m1old, m2old;
 	double pmat[3][2], rop[2], vop[2], rrel[3], vrel[3];
-	double ea, mm, eadot, cosi, inc, peri, node;
+	double ea, mm, eadot, cosi, inc, peri, node,rperi;
 	double lP, P;	
 	double u1, u2;
 	double q, p, x1, x2;	
 	double lP1, lP2, lPmean, lPsigma;
 	double rcm[3], vcm[3];
+//	double aminfact;
+
+	amin /= rvir;
+	amax /= rvir;
 
 	double zpars[20];     //metallicity parameters
 	double vkick[2];	 //kick velocity for compact remnants	
@@ -3522,13 +3807,12 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 		vesc = 1.0E10;
 		if (BSE) printf("Keeping all compact remnants\n");
 	}		
-	
+	printf("Vesc %f \n",vesc );
 	for (i=0; i<20; i++) zpars[i] = 0;
 	zcnsts_(&Z,zpars);  //get metallicity parameters
 	
 	if (BSE) printf("\nSetting up binary population with Z = %.4f.\n",Z);
-	if (epoch) printf("\nEvolving binary population for %.1f Myr.\n",epoch);
-
+	//if (epoch) printf("\nEvolving binary population for %.1f Myr.\n",epoch);
 
 	for (i=0; i < nbin; i++) {
 		do {
@@ -3538,141 +3822,153 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 				m1 = star[2*i+N2][7]/M;
 				m2 = star[2*i+1+N2][7]/M;
 			} else {
-				m1 = star[2*i+N2][0];
-				m2 = star[2*i+1+N2][0];
+				m1 = star[2*i+N2][0]/M;
+				m2 = star[2*i+1+N2][0]/M;
 			}
-		
+
+			standalone_rzamsf(m1*M,&rad1);
+			standalone_rzamsf(m2*M,&rad2);
+			int num_of_iter = 0;
+			do {
 			//Specify semi-major axis
-			if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
-			  if (adis == 3) {
-			        double lPmin = 0.15, alpha = 0.45; //Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)
-				double ralpha = 1/alpha, eta = alpha/0.23;
-				lP = pow(pow(lPmin,alpha) + eta*drand48(),ralpha);
-			  } else {
-				//derive from Sana & Evans (2011) period distribution for massive binaries
-				double lPmin = 0.3, lPmax = 3.5, lPbreak = 1.0; //parameters of Sana & Evans (2011) period distribution in days (eq. 5.1)
-				double Fbreak = 0.5; //fraction of binaries with periods below Pbreak
-				double xperiod = drand48();
-				if (xperiod <= Fbreak)
-					lP = xperiod *(lPbreak-lPmin)/Fbreak + lPmin;
-				else
-					lP = (xperiod - Fbreak)*(lPmax-lPbreak)/(1.0-Fbreak) + lPbreak;
-			  }
+				if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
+					if (adis == 3) {
+						double lPmin = 0.15, alpha = 0.45; //Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)
+						double ralpha = 1/alpha, eta = alpha/0.23;
+						lP = pow(pow(lPmin,alpha) + eta*drand48(),ralpha);
+			  		} else {
+					//derive from Sana & Evans (2011) period distribution for massive binaries
+						double lPmin = 0.3, lPmax = 3.5, lPbreak = 1.0; //parameters of Sana & Evans (2011) period distribution in days (eq. 5.1)
+						double Fbreak = 0.5; //fraction of binaries with periods below Pbreak
+						double xperiod = drand48();
+						if (xperiod <= Fbreak) {
+							lP = xperiod *(lPbreak-lPmin)/Fbreak + lPmin;
+						} else {
+							lP = (xperiod - Fbreak)*(lPmax-lPbreak)/(1.0-Fbreak) + lPbreak;
+						}
+			  		}
 
-				P = pow(10.0,lP);//days
-				P /= 365.25;//yr
+					P = pow(10.0,lP);//days
+					P /= 365.25;//yr
 				
-				abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
-				abin /= 206264.806;//pc
-				abin /= rvir;//Nbody units				
-			} else if (adis == 0) {
-				//uniform distribution in log(a), between amin and amax
-				if (!i) printf("\nApplying uniform distribution in log(a), with amin = %g and amax = %g.\n", amin, amax);
-				if (!i) amin /= rvir;
-				if (!i) amax /= rvir;
-				abin = amax/(pow(10.0,drand48()*log10(amax/amin)));
-			} else if (adis == 1) {
-				//lognormal distribution distribution for a
-				if (!i) printf("\nApplying lognormal distribution for a.\n");
-				double ak, akw, amaxim;
-				do{
-					amaxim = 100.0/206264.806/rvir;
-					ak = acos(2.0/(pow(0.001,0.33) + pow(0.001,-0.33)));
-					akw = ak*(2.0*drand48() - 1.0);
-					abin = 30.0*pow((1.0 + sin(akw))/cos(akw),3.0);
+					abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
 					abin /= 206264.806;//pc
-					abin /= rvir;
-				} while (abin > amaxim);
-			} else if (adis == 2 || adis == 3) {
-				//derive from Kroupa (1995) period distribution
-				if (!i) printf("\nDeriving semi-major axis distribution from Kroupa (1995) period distribution.\n");
-				double Pmin = 10, delta = 45, eta = 2.5; //parameters of Kroupa (1995) period distribution
-				do {
-					lP = log10(Pmin) + sqrt(delta*(exp(2.0*drand48()/eta) - 1.0));
-				} while (lP > 8.43);
+					abin /= rvir;//Nbody units				
+				} else if (adis == 0 || adis == 6) {
+					//uniform distribution in log(a), between amin and amax
+					if (!num_of_iter && !i) printf("\nApplying uniform distribution in log(a), with amin = %g and amax = %g.\n", amin*rvir/RSUN2PC_MC, amax*rvir/RSUN2PC_MC);
+//					if (!i) amin /= rvir;
+//					if (!i) amax /= rvir;
+					abin = amax/(pow(10.0,drand48()*log10(amax/amin)));
+				} else if (adis == 1) {
+					//lognormal distribution distribution for a
+					if (!num_of_iter && !i) printf("\nApplying lognormal distribution for a.\n");
+					double ak, akw, amaxim;
+					do{
+						amaxim = 100.0/206264.806/rvir;
+						ak = acos(2.0/(pow(0.001,0.33) + pow(0.001,-0.33)));
+						akw = ak*(2.0*drand48() - 1.0);
+						abin = 30.0*pow((1.0 + sin(akw))/cos(akw),3.0);
+						abin /= 206264.806;//pc
+						abin /= rvir;
+					} while (abin > amaxim);
+				} else if (adis == 2 || adis == 3) {
+					//derive from Kroupa (1995) period distribution
+					if (!num_of_iter && !i) printf("\nDeriving semi-major axis distribution from Kroupa (1995) period distribution.\n");
+					double Pmin = 10, delta = 45, eta = 2.5; //parameters of Kroupa (1995) period distribution
+					do {
+						lP = log10(Pmin) + sqrt(delta*(exp(2.0*drand48()/eta) - 1.0));
+					} while (lP > 8.43);
 			
-				P = pow(10.0,lP);//days
-				P /= 365.25;//yr
+					P = pow(10.0,lP);//days
+					P /= 365.25;//yr
 
-				abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
-				abin /= 206264.806;//pc
-				abin /= rvir;//Nbody units
-			} else if (adis == 4) {
-				//flat semi-major axis distribution
-				if (!i) printf("\nApplying flat semi-major axis distribution with amin = %g and amax = %g.\n", amin, amax);
-				if (!i) amin /= rvir;
-				if (!i) amax /= rvir;
-				abin = amin+drand48()*(amax-amin);
-			} else if (adis == 5) {
-				//derive from Duquennoy & Mayor (1991) period distribution
-				lPmean = 4.8;	//mean of Duquennoy & Mayor (1991) period distribution [log days]
-				lPsigma = 2.3;	//full width half maximum of Duquennoy & Mayor (1991) period distribution [log days]
-				if (!i) printf("\nDeriving semi-major axis distribution from Duquennoy & Mayor (1991) period distribution.\n");
-				do {
-					//generate two random numbers in the interval [-1,1]
-					u1 = 2.0*drand48()-1.0;
-					u2 = 2.0*drand48()-1.0;
-					
-					//combine the two random numbers
-					q = u1*u1 + u2*u2;
-				} while (q > 1.0);
+					abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
+					abin /= 206264.806;//pc
+					abin /= rvir;//Nbody units
+				} else if (adis == 4) {
+					//flat semi-major axis distribution
+					if (!num_of_iter && !i) printf("\nApplying flat semi-major axis distribution with amin = %g and amax = %g.\n", amin*rvir/RSUN2PC_MC, amax*rvir/RSUN2PC_MC);
+//					if (!i) amin /= rvir;
+//					if (!i) amax /= rvir;
+					abin = amin+drand48()*(amax-amin);
+				} else if (adis == 5) {
+					//derive from Duquennoy & Mayor (1991) period distribution
+					lPmean = 4.8;	//mean of Duquennoy & Mayor (1991) period distribution [log days]
+					lPsigma = 2.3;	//full width half maximum of Duquennoy & Mayor (1991) period distribution [log days]
+					if (!num_of_iter && !i) printf("\nDeriving semi-major axis distribution from Duquennoy & Mayor (1991) period distribution.\n");
+					do {
+						//generate two random numbers in the interval [-1,1]
+						u1 = 2.0*drand48()-1.0;
+						u2 = 2.0*drand48()-1.0;
+						
+						//combine the two random numbers
+						q = u1*u1 + u2*u2;
+					} while (q > 1.0);
 
-				p = sqrt(-2.0*log(q)/q);
-				x1 = u1*p;
-				x2 = u2*p;
-				lP1 = lPsigma*x1 + lPmean;
-				lP2 = lPsigma*x2 + lPmean;
+					p = sqrt(-2.0*log(q)/q);
+					x1 = u1*p;
+					x2 = u2*p;
+					lP1 = lPsigma*x1 + lPmean;
+					lP2 = lPsigma*x2 + lPmean;
 
-				P = pow(10,lP1);//days
-				P /= 365.25;//yr
+					P = pow(10,lP1);//days
+					P /= 365.25;//yr
 
-				abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
-				abin /= 206264.806;//pc
-				abin /= rvir;//Nbody units
-			}
-
-
-
-          		if (!i && OBperiods && msort) {
-			  if (adis == 3) {
-			    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution.\n",msort);
-			  }  else {
-			    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana & Evans (2011) period distribution.\n",msort);
-			  }
-			}
-
-			//Specify eccentricity distribution
-			if (!i && OBperiods && msort) printf("\nApplying thermal eccentricity distribution for low-mass systems and Sana & Evans (2011) eccentricity distribution for high-mass systems.\n");
-			else if (!i) printf("\nApplying thermal eccentricity distribution.\n");	
-				
-			if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
-				double k1, k2;
-				double elim = 0.8; //maximum eccentricity for high-mass binaries
-				double fcirc = 0.3; //fraction of circular orbits among high-mass binaries
-				k2 = (fcirc*exp(0.5*elim)-1.0)/(exp(0.5*elim)-1.0);
-				k1 = fcirc-k2;
-				ecc = drand48();
-				if (ecc < fcirc) ecc = 0.0;
-				else {
-					ecc = 2.0*log((ecc-k2)/k1);
+					abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
+					abin /= 206264.806;//pc
+					abin /= rvir;//Nbody units
 				}
-			} else {
-				ecc = sqrt(drand48());   // Thermal distribution f(e)=2e 				
-			}
-			//ecc = 0.0;   // all circular 
-		
-			
-			
+				//if (!num_of_iter && !i) printf("condition while:%e %e %e %e\n", amin,amax,abin*rvir/RSUN2PC_MC, rad1+rad2);
+
+
+				if (!num_of_iter && !i && OBperiods && msort) {
+				  if (adis == 3 && adis != 6) {
+				    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana et al., (2012); Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution.\n",msort);
+				  }  else {
+				    printf("\nDeriving semi-major axis distribution for binaries with primary masses > %.3f Msun from Sana & Evans (2011) period distribution.\n",msort);
+				  }
+			  	  if (adis == 6) {
+			  	  	printf(" Applying uniform distribution in log(a), with amin = %g and amax = %g for low mass stars.\n", amin*rvir/RSUN2PC_MC, amax*rvir/RSUN2PC_MC);
+			  	  }
+				}
+
+				//Specify eccentricity distribution
+				if (!num_of_iter && !i && OBperiods && msort) {
+					printf(" Applying thermal eccentricity distribution for low-mass systems and Sana & Evans (2011) eccentricity distribution for high-mass systems.\n");
+				} else if (!num_of_iter && !i){
+					 printf(" Applying thermal eccentricity distribution.\n");
+				}
+					
+				if (((m1*M>=msort) || (m2*M>=msort)) && (OBperiods)) {
+					double k1, k2;
+					double elim = 0.8; //maximum eccentricity for high-mass binaries
+					double fcirc = 0.3; //fraction of circular orbits among high-mass binaries
+					k2 = (fcirc*exp(0.5*elim)-1.0)/(exp(0.5*elim)-1.0);
+					k1 = fcirc-k2;
+					ecc = drand48();
+					if (ecc < fcirc) ecc = 0.0;
+					else {
+						ecc = 2.0*log((ecc-k2)/k1);
+					}
+				} else {
+					ecc = sqrt(drand48());   // Thermal distribution f(e)=2e
+				}			//ecc = 0.0;   // all circular 
+
+				rperi = (abin*rvir/RSUN2PC_MC)*(1-ecc); //abin in Nbody units, abin*rvir in pc, abin*rvir/RSUN2PC_MC in Rsun
+				num_of_iter += 1;
+			} while ( rperi < 1.1*(rad1 + rad2) ); 
+
 			//Apply Kroupa (1995) eigenevolution
 			if (eigen==1) {
-				if ((OBperiods && ((m1*M<=msort) || (m2*M<=msort)))) {
-					if (!i) printf("\nApplying Kroupa (1995) eigenevolution for short-period binaries\n");
+				if (!(OBperiods && ((m1*M>=msort) || (m2*M>=msort)))) {
+					if (!i) printf(" Applying Kroupa (1995) eigenevolution for short-period binaries\n");
 					if (m1>=m2) eigenevolution_old(&m1, &m2, &ecc, &abin, M, rvir);
 					else  eigenevolution_old(&m2, &m1, &ecc, &abin, M, rvir);
 				}
 			}
 
-			//Apply new eigenevolution and feeding algorithm - Kroupa (2013)
+			//Apply new eigenevolution and feeding algorithm - Kroupa (2013), rewied in Belloni et al. (2017) 
 			if (eigen==2) {
 				if ((OBperiods && ((m1*M>=msort) || (m2*M>=msort)))){
 					double emax;
@@ -3771,23 +4067,24 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 			}
 
 			for (j=0;j<3;j++) {
-				rcm[j] = (m1*star[2*i+N2][j]+m2*star[2*i+1+N2][j])/(m1+m2);
+				rcm[j] = (m1*star[2*i+N2][j+1]+m2*star[2*i+1+N2][j+1])/(m1+m2);
 				vcm[j] = (m1*star[2*i+N2][j+4]+m2*star[2*i+1+N2][j+4])/(m1+m2);
 			}
+
 			for (j=0;j<3;j++) {
 				star[2*i+1+N2][j+1] = star[2*i+N2][j+1] + m1/(m1+m2)*rrel[j];		 //Star2 pos
 				star[2*i+1+N2][j+4] = star[2*i+N2][j+4] + m1/(m1+m2)*vrel[j];      //Star2 vel
 				star[2*i+N2][j+1]  -= m2/(m1+m2)*rrel[j];                       //Star1 pos
 				star[2*i+N2][j+4]  -= m2/(m1+m2)*vrel[j];                       //Star1 vel
 			}
-			star[2*i+N2][0] = m1;
-			star[2*i+1+N2][0] = m2;
+			star[2*i+N2][0] = m1*M;
+			star[2*i+1+N2][0] = m2*M;
 
 
 		} while ((sqrt(vkick[0]) > vesc) && (sqrt(vkick[1]) > vesc));
 
 		eccbinaries[i+N3] = ecc;
-		abinaries[i+N3] = log10(abin*rvir/2.25461E-8);
+		abinaries[i+N3] = log10(abin*rvir/RSUN2PC_MC);
 		cmb[i+N3][0] = rcm[0];
 		cmb[i+N3][1] = rcm[1];
 		cmb[i+N3][2] = rcm[2];
@@ -3888,7 +4185,7 @@ void shellsort_reverse_1d(double *array, int N) {//smallest up
 	}
 }
 
-int order(double **star, int N, double M, double msort, int pairing, int N2){
+int order(double **star, int N, double M, double msort, int pairing, int N2, double fb){
 	int i,j;
 	int Nhighmass;
 	int columns = 15;
@@ -3914,17 +4211,24 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
 	}
 
 	//temporary scaling to astrophysical units
-	for (i=0;i<N;i++) {
+	if (pairing) {
+		for (i=0;i<N;i++) {
 		//star[i][0] *= M;
 		//masses[i][0] = star[i][0];
-		masses[i][0] = star[i+N2][7];
+		masses[i][0] = star[i+N2][0];
 		masses[i][1] = i+N2;
+		}
+		shellsort(masses, N, 2);
+	} else {
+		int inotzero = 0;
+		for (i=0;i<N;i++) {
+			if(star[i+N2][0] != 0.0){
+				masses[inotzero][0] = star[i+N2][0];
+				masses[inotzero][1] = i+N2;
+				inotzero += 1;
+			}
+		}
 	}
-	shellsort(masses, N, 2);	
-	
-    //Long Wang add pairing=3 for uniform mass ratio distribution of O type binaries (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014)
-    // f(q) ~ q^n  (n = 0; 0.1<=q<=1.0)
-    if (pairing==3) {
       // Mask to show which mass is already used, 1 means used
       int *mask = (int*)calloc(N,sizeof(int));
       if (mask == NULL) {
@@ -3934,7 +4238,9 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
       for (i=0;i<N;i++) {
         mask[i] = 0;
       }
-
+    //Long Wang add pairing=3 for uniform mass ratio distribution of O type binaries (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014)
+    // f(q) ~ q^n  (n = 0; 0.1<=q<=1.0)
+    if (pairing==3) {
       double **mmrand = (double**)calloc(N,sizeof(double *));
       for (j=0;j<N;j++){
 		mmrand[j] = (double *)calloc(2,sizeof(double));
@@ -3944,8 +4250,34 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
 		}
       }
 
+// changed by Agostino Leveque in 17/9/19 for binary distribution problem (Mmax for single = 5.0 MSun)
+       double s, Ps;
+      Ps = (1.0 - fb)/(1.0 + fb);
       j = 0;
-      int ileft = 0;
+      int ileft = 0, ileftsing = 0;
+      for (i=0;i<N;i++) {
+       	s = drand48();
+  		if (s < Ps){ // the star is considered as a single
+            star_temp[N-1-ileftsing][0] = star[(int) masses[i][1]][0];
+            star_temp[N-1-ileftsing][1] = star[(int) masses[i][1]][1];
+            star_temp[N-1-ileftsing][2] = star[(int) masses[i][1]][2];
+            star_temp[N-1-ileftsing][3] = star[(int) masses[i][1]][3];
+            star_temp[N-1-ileftsing][4] = star[(int) masses[i][1]][4];
+            star_temp[N-1-ileftsing][5] = star[(int) masses[i][1]][5];
+            star_temp[N-1-ileftsing][6] = star[(int) masses[i][1]][6];
+            star_temp[N-1-ileftsing][7] = star[(int) masses[i][1]][7];
+            star_temp[N-1-ileftsing][8] = star[(int) masses[i][1]][8];
+            star_temp[N-1-ileftsing][9] = star[(int) masses[i][1]][9];
+            star_temp[N-1-ileftsing][10] = star[(int) masses[i][1]][10];
+            star_temp[N-1-ileftsing][11] = star[(int) masses[i][1]][11];
+            star_temp[N-1-ileftsing][12] = star[(int) masses[i][1]][12];
+            star_temp[N-1-ileftsing][13] = star[(int) masses[i][1]][13];
+            star_temp[N-1-ileftsing][14] = star[(int) masses[i][1]][14];
+          	mask[i] = 1;
+        	ileftsing++;
+  	    }
+      }
+
       for (i=0;i<N;i++) {
         if(mask[i]==0) {
           if(masses[i][0] >= msort) {
@@ -3969,7 +4301,31 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
             j++;
             // Find the second one based on uniform mass ratio
             if (i<N-1) {
-              double mpair = (drand48()*0.9+0.1)*masses[i][0];
+		              double mpair = (drand48()*0.9+0.1)*masses[i][0];
+                              // second index
+                              int k = -1;
+                              // find closest one
+                              int k1 = i+1;
+                              while (k1<N && mask[k1]==1) k1++;
+                              if (k1<N) {
+                                double mk = fabs(masses[k1][0]-mpair);
+                                double dm = mk;
+                                int k2 = k1;
+                                do {
+                                  k1 = k2;
+                                  mk = dm;
+                                 k2++;
+                                 while (k2<N && mask[k2]==1) k2++;
+                                 if(k2<N) dm = fabs(masses[k2][0]-mpair);
+                                 else dm=mk;
+                                } while(dm<mk);
+                                k = k1;
+                                //printf("mass_ratio(true,real): %f %f\n",mpair/masses[i][0], masses[k][0]/masses[i][0]);
+                               if(dm/mpair>1e-2) 
+                   		    printf("WARNING: dm too large: m1=%F, mp=%f, m2=%f, dm=%f, i=%d, k=%d\n",masses[i][0],mpair,masses[k][0],dm,i,k);
+                            }
+              //printf("mpair =%f, k=%d, i=%d, mass[k]=%f\n",mpair,k,i,masses[k][0]);
+/*
               int k = i+1;
               while (masses[k][0] > mpair) {
                 k++;
@@ -3995,6 +4351,7 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
                   else k = k1;
                 }
               }
+*/
               if (k>0) {
                 if(j>=N) {
                   perror("\n Error!: Pairing binary star exceed the maximum index!\n");
@@ -4019,27 +4376,28 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
                 mask[k] = 1;
                 j++;
               } else {
-                printf("Mass %g did not find good pair, expected pair mass: %g\n",masses[i][0],mpair);
+                printf(" Mass %g did not find good pair, expected pair mass: %g\n",masses[i][0],mpair);
               }
             }
-          }
-          else {
-            // Store index for remaining stars
-            mmrand[ileft][0] = drand48();
-            mmrand[ileft][1] = masses[i][1];
-            ileft++;
-          }
-        }
+		        } else {
+		            // Store index for remaining stars
+		            mmrand[ileft][0] = drand48();
+		            mmrand[ileft][1] = masses[i][1];
+		            mask[i] = 1;
+		            ileft++;
+		        }
+		    }
+	    
       }
       
       // Error check, ileft+j should be N
-      if(ileft+j!=N) {
+      if(ileft+j+ileftsing!=N) {
         fprintf(stderr,"\n Error! M>Msort binaries + M<Msort binaries did not match total number M>Msort: %d, M<Msort: %d, N: %d\n",j,ileft,N);
         exit(0);
       }
       if (msort) {
         Nhighmass = j;
-        printf("\n Number of binaries with M>Msort: %d",j/2);
+        printf("\n Number of binaries with M>%.3f Mo: %d",msort,j/2);
       }
 
       // Randomize indexs for random pairing
@@ -4065,10 +4423,39 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
       }
 
     }else {
+    	if(pairing) {
+      double s, Ps;
+      Ps = (1.0 - fb)/(1.0 + fb);
+      j = 0;
+      int ileft = 0, ileftsing = 0;
+      for (i=0;i<N;i++) {
+       	s = drand48();
+  		if (s < Ps){ // the star is considered as a single
+            star_temp[N-1-ileftsing][0] = star[(int) masses[i][1]][0];
+            star_temp[N-1-ileftsing][1] = star[(int) masses[i][1]][1];
+            star_temp[N-1-ileftsing][2] = star[(int) masses[i][1]][2];
+            star_temp[N-1-ileftsing][3] = star[(int) masses[i][1]][3];
+            star_temp[N-1-ileftsing][4] = star[(int) masses[i][1]][4];
+            star_temp[N-1-ileftsing][5] = star[(int) masses[i][1]][5];
+            star_temp[N-1-ileftsing][6] = star[(int) masses[i][1]][6];
+            star_temp[N-1-ileftsing][7] = star[(int) masses[i][1]][7];
+            star_temp[N-1-ileftsing][8] = star[(int) masses[i][1]][8];
+            star_temp[N-1-ileftsing][9] = star[(int) masses[i][1]][9];
+            star_temp[N-1-ileftsing][10] = star[(int) masses[i][1]][10];
+            star_temp[N-1-ileftsing][11] = star[(int) masses[i][1]][11];
+            star_temp[N-1-ileftsing][12] = star[(int) masses[i][1]][12];
+            star_temp[N-1-ileftsing][13] = star[(int) masses[i][1]][13];
+            star_temp[N-1-ileftsing][14] = star[(int) masses[i][1]][14];
+          	mask[i] = 1;
+        	ileftsing++;
+  	    }
+      }
+  	}
 
       j = 0;
       for (i=0;i<N;i++) {
-		if (masses[i][0] >= msort) {//copying to front of temporary array if massive
+      	if(mask[i] == 0) {
+		if (masses[i][0] >= msort && masses[i][0] != 0.0) {//copying to front of temporary array if massive
           star_temp[j][0] = star[(int) masses[i][1]][0];
           star_temp[j][1] = star[(int) masses[i][1]][1];
           star_temp[j][2] = star[(int) masses[i][1]][2];
@@ -4085,11 +4472,14 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
           star_temp[j][13] = star[(int) masses[i][1]][13];
           star_temp[j][14] = star[(int) masses[i][1]][14];
           j++;
+          mask[i] == 1;
 		}
       }
+  	}
       if (msort) Nhighmass = j;
 	
       for (i=0;i<N;i++) {
+      	if(mask[i] == 0) {
 		if (masses[i][0] < msort) {//copying to random position in the back of temporary array
           do {
             j = drand48()*N;
@@ -4109,6 +4499,8 @@ int order(double **star, int N, double M, double msort, int pairing, int N2){
           star_temp[j][12] = star[(int) masses[i][1]][12];
           star_temp[j][13] = star[(int) masses[i][1]][13];
           star_temp[j][14] = star[(int) masses[i][1]][14];
+          mask[i]==1;
+      }
 		}
       }
     }	
@@ -4338,7 +4730,7 @@ int radial_distance_order(double **star, int N){
 		}
 	}
 	for (i=0;i<N;i++) {
-		radial_distance[i][0] = sqrt(star[i][1]*star[i][1]+star[i][2]*star[i][2]+star[i][3]*star[i][3]);
+		radial_distance[i][0] = sqrt(pow(star[i][1],2)+pow(star[i][2],2)+pow(star[i][3],2));
 		radial_distance[i][1] = i;
 
 	}
@@ -4560,165 +4952,6 @@ int eigenevolution_new(double *m1, double *m2, double *ecc, double *abin, double
 	return 0;
 }
 
-/*
-
-int radial_profile(double **star, int N, double rvir, double M, int create_radial_profile, int create_cumulative_profile, int code, int *NNBMAX, double *RS0, double *Rh2D, double *Rh3D, int NNBMAX_NBODY6) {
-	int i, j;
-	*Rh2D = 0.0;
-	*Rh3D = 0.0;
-	double Mtemp;
-	double **rarray;
-	rarray = (double **)calloc(N,sizeof(double *));
-	for (j=0;j<N;j++){
-		rarray[j] = (double *)calloc(3,sizeof(double));
-		if (rarray[j] == NULL) {
-			printf("\nMemory allocation failed!\n");
-			return 0;
-		}
-	} 
-	double **rarray2D;
-	rarray2D = (double **)calloc(N,sizeof(double *));
-	for (j=0;j<N;j++){
-		rarray2D[j] = (double *)calloc(3,sizeof(double));
-		if (rarray2D[j] == NULL) {
-			printf("\nMemory allocation failed!\n");
-			return 0;
-		}
-	} 
-	
-	for (j=0; j<N; j++) {
-		rarray[j][0] = rvir*sqrt(star[j][1]*star[j][1]+star[j][2]*star[j][2]+star[j][3]*star[j][3]);
-		rarray[j][1] = star[j][0]*M;
-		rarray[j][2] = star[j][12];
-		rarray2D[j][0] = rvir*sqrt(star[j][1]*star[j][1]+star[j][2]*star[j][2]);
-		rarray2D[j][1] = star[j][0]*M;
-		rarray2D[j][2] = star[j][12];
-	}
-	shellsort_reverse(rarray, N, 3);	
-	shellsort_reverse(rarray2D, N, 3);	
-	
-	int noofradialbins = 20;
-	double rprofile[noofradialbins][9];
-	double rmax = 100.0; //pc
-	double rmin = 0.1;
-	double stepsize;
-	stepsize = (log10(rmax)-log10(rmin))/(noofradialbins-1);
-		
-	for (j=0;j<noofradialbins;j++) {
-		rprofile[j][0] = pow(10.0, log10(rmin) + stepsize*j); //radius
-		//rprofile[j][0] = 1.0*exp(log(rmax)*(j+1)/noofradialbins)-1.0; //radius
-		rprofile[j][2] = 0; //number
-		rprofile[j][3] = 0; //mass
-		rprofile[j][4] = 0; //luminosity
-		if (j == 0)
-			rprofile[j][1] =  4.0/3.0*PI*pow(rprofile[j][0],3); //volume
-		else
-			rprofile[j][1] = 4.0/3.0*PI*(pow(rprofile[j][0],3) - pow(rprofile[j-1][0],3)); //volume
-		rprofile[j][6] = 0; //number (2D)
-		rprofile[j][7] = 0; //mass (2D)
-		rprofile[j][8] = 0; //luminosity (2D)
-		if (j == 0)
-			rprofile[j][5] =  PI*pow(rprofile[j][0],2); //area
-		else
-			rprofile[j][5] = PI*(pow(rprofile[j][0],2) - pow(rprofile[j-1][0],2)); //area
-	}
-	
-	j = 0; i = 0; Mtemp = 0.0;
-	while ((j < noofradialbins) && (i < N)) {
-		if (rarray[i][0] < rprofile[j][0]) {//3D binning in astrophysical units
-			rprofile[j][2] += 1.0;
-			rprofile[j][3] += rarray[i][1];
-			rprofile[j][4] += rarray[i][2];
-			Mtemp += rarray[i][1];
-			if ((Mtemp>=0.5*M) && !(*Rh3D)) *Rh3D = rarray[i][0];
-			i++;
-		} else {
-			j++;
-		}
-	}
-	
-	j = 0; i = 0; Mtemp = 0.0;
-	while ((j < noofradialbins) && (i < N)) {
-		if (rarray2D[i][0] < rprofile[j][0]) {//2D binning in astrophysical units
-			rprofile[j][6] += 1.0;
-			rprofile[j][7] += rarray2D[i][1];
-			rprofile[j][8] += rarray2D[i][2];
-			Mtemp += rarray2D[i][1];
-			if ((Mtemp>=0.5*M) && !(*Rh2D)) *Rh2D = rarray2D[i][0];
-			i++;
-		} else {
-			j++;
-		}
-	}
-	
-	if (create_radial_profile) {
-		printf("\nRadial density profile:\n\n#  R [pc]   N [1/pc^3]   M [Msun/pc^3]   L [Lsun/pc^3]   N [1/pc^2]   M [Msun/pc^2]   L [Lsun/pc^2] \n");
-		for (j=0;j<noofradialbins;j++) printf("%9.4f  %11.4f  %14.4f  %14.4f  %11.4f  %14.4f %15.4f\n",rprofile[j][0],rprofile[j][2]/rprofile[j][1],rprofile[j][3]/rprofile[j][1],rprofile[j][4]/rprofile[j][1],rprofile[j][6]/rprofile[j][5],rprofile[j][7]/rprofile[j][5],rprofile[j][8]/rprofile[j][5]); //print radial density profile to screen
-	}
-	if (create_cumulative_profile) {
-		double ntemp = 0.0;
-		double mtemp = 0.0;
-		double ltemp = 0.0;
-		double ntemp2D = 0.0;
-		double mtemp2D = 0.0;
-		double ltemp2D = 0.0;
-		double nmax, mmax, lmax, nhalf, mhalf, lhalf;
-		double nhalf2D, mhalf2D, lhalf2D;
-		printf("\nCumulative profile:\n\n#  R [pc]         N     M [Msun]     L [Lsun]    N (2D)    M(2D) [Msun]    L(2D) [Lsun]\n");
-		for (j=0;j<noofradialbins;j++) {
-			ntemp += rprofile[j][2];
-			mtemp += rprofile[j][3];
-			ltemp += rprofile[j][4];
-			ntemp2D += rprofile[j][6];
-			mtemp2D += rprofile[j][7];
-			ltemp2D += rprofile[j][8];
-			printf("%9.4f  %8.0f  %11.3f  %11.3f  %8.0f  %14.4f  %14.4f\n",rprofile[j][0],ntemp,mtemp,ltemp,ntemp2D,mtemp2D,ltemp2D); //print cumulative profile to screen
-		}
-		nmax = ntemp;
-		mmax = mtemp;
-		lmax = ltemp;
-		nhalf = mhalf = lhalf = 0.0;
-		nhalf2D = mhalf2D = lhalf2D = 0.0;
-		ntemp = mtemp = ltemp = 0.0;
-		ntemp2D = mtemp2D = ltemp2D = 0.0;
-		for (j=0;j<N;j++) {
-			ntemp += 1.0;
-			mtemp += rarray[j][1];
-			ltemp += rarray[j][2];
-			if (!(nhalf) && (ntemp>=0.5*nmax)) nhalf = rarray[j][0];
-			if (!(mhalf) && (mtemp>=0.5*mmax)) mhalf = rarray[j][0];
-			if (!(lhalf) && (ltemp>=0.5*lmax)) lhalf = rarray[j][0];
-			ntemp2D += 1.0;
-			mtemp2D += rarray2D[j][1];
-			ltemp2D += rarray2D[j][2];
-			if (!(nhalf2D) && (ntemp2D>=0.5*nmax)) nhalf2D = rarray2D[j][0];
-			if (!(mhalf2D) && (mtemp2D>=0.5*mmax)) mhalf2D = rarray2D[j][0];
-			if (!(lhalf2D) && (ltemp2D>=0.5*lmax)) lhalf2D = rarray2D[j][0];
-		}
-		printf("\nHalf-number radius = %.4f pc (%.4f pc, 2D)\nHalf-mass radius = %.4f pc (%.4f pc, 2D)\nHalf-light radius = %.4f pc (%.4f pc, 2D)\n",nhalf,nhalf2D,mhalf,mhalf2D,lhalf,lhalf2D); //print radii
-		
-	}
-	
-	
-	//estimate NNBMAX and RS0 (Nbody6 only)
-	if ((code == 0) || (code == 2) || code == 4 || (code == 5)) {
-		*NNBMAX = 2.0*sqrt(N);
-		if (*NNBMAX < 30) *NNBMAX = 30;
-		if (N<=*NNBMAX) *NNBMAX = 0.5*N;
-		if (*NNBMAX > NNBMAX_NBODY6) *NNBMAX = NNBMAX_NBODY6;
-		*RS0 = rarray[*NNBMAX][0];
-		printf("\nEstimating appropriate NNBMAX = %i and RS0 = %f [pc]\n",*NNBMAX,*RS0);
-	}
-	
-	for (j=0;j<N;j++) free (rarray[j]);
-	free(rarray);
-	for (j=0;j<N;j++) free (rarray2D[j]);
-	free(rarray2D);
-
-	return 0;
-}
-
-*/
 
 int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double *BV, double *Teff, double *dvmag, double *dBV) {
 	
@@ -4796,419 +5029,39 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 	return 0;
 }			
 
-/*
-int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
+int arraytodouble(char str[], double *array){
+	char *pt;
+	int i;
+	i=0;
+	char* str_chop = str + 1;
+	pt = strtok (str_chop,", ");
 
-	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.input",output);
-	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.fort.10",output);
-	NBODY = fopen(NBODYfile,"w");
-
-	int hrplot = 0;
-	if (dtplot) hrplot = 1;
-	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
-		SSE12 = fopen(SSEfile,"w");
-		hrplot = 2;
-	}		
-	
-	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 0\n");
-	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
-	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
-	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 1\n",bin,esc);
-	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
-	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
-	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
-	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
-	if (tf == 2) {
-		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 3) {
-		//old version:
-		//fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-
-		//new version including bulge potential:
-		fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6e %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC, GMB, AR, GAM);
-		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
+	while (pt != NULL) {
+		array[i] = atof(pt);
+		pt = strtok (NULL, ", ");
+		i++;
 	}
-	if (tf > 2)	fprintf(PAR,"%.6f %.6f %.6f %.6f\n",extmass,extrad,extdecay,extstart);
-
-	
-	
-	
-	//write to .fort.10 file
-	int j;
-	for (j=0;j<N;j++) {
-		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
-	}
-	
-	//write to .fort.12 file
-	if (sse) {
-		for (j=0;j<N;j++) {
-			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
-			//,star[j][13],star[j][14]);
-		}
-	}
-	
-	fclose(PAR);
-	fclose(NBODY);
-	if (bin == 5) {
-		fclose(SSE12);
-		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
-	} else {
-		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
-	}
-	
 	return 0;
-	
 }
 
-int output1(char *output, int N, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star){
-
-	//Open output files
-	char PARfile[50], NBODYfile[50];		
-	FILE *PAR, *NBODY;
-	sprintf(PARfile, "%s.PAR",output);
-	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
-	NBODY = fopen(NBODYfile,"w");
-	
-	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 0\n");
-	fprintf (PAR,"%i 1 10 3 8\n",N);
-	fprintf(PAR,"0.02 %.8f %.8f %.8f 100.0 1000.0 1.0E-02 %.8f %.8f\n",dtadj,dtout,tcrit,rvir,mmean);
-	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
-	fprintf(PAR,"0 0 0 %i 2 %i %i 0 %i 2\n",tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 0 0 0 2\n",bin, esc);
-	fprintf(PAR,"0 0 0 0 1 0 0 2 0 3\n");
-	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
-	fprintf(PAR,"%.8f %.8f %.8f\n",M,mlow,mup);
-	fprintf(PAR,"1.0E-5 1.0E-4 0.01 1.0 1.0E-06 0.01\n");
-	fprintf(PAR,"2.350000 %.8f %.8f %i %.8f %.8f 100000.0\n",MMAX,mlow, nbin, Z, epoch);	
-	fprintf(PAR,"%.2f 0.0 0.0 0.00000\n",Q);
-	if (tf == 1) {
-		rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-		fprintf(PAR,"%i %.8f\n",0,sqrt(1.0/(3.0*pow(rtide,3))));
-		
-	} else if (tf == 2) {
-		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]));
-	} else if (tf == 3) {
-		fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-	}
-	if (gpu) fprintf(PAR,"1.0\n");
-	
-	//write to .NBODY file
+int multiplearraytodouble(char str[], double **array){
+	char *pt;
+	int i=0;
 	int j;
-	for (j=0;j<N;j++) {
-		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
+	char char_mom[10][200];
+	pt = strtok(str, ";");
+	while (pt != NULL){
+		strcpy(char_mom[i], pt);
+		pt = strtok (NULL, ";");
+		i++;
 	}
-	
-	fclose(PAR);
-	fclose(NBODY);
-	printf("\nData written to %s and %s\n", PARfile, NBODYfile);
-	
+
+	for (j=0;j<i;j++){
+		arraytodouble(char_mom[j],array[j]);
+	}
+
 	return 0;
-	
 }
-
-int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
-
-	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.PAR",output);
-	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.NBODY",output);
-	NBODY = fopen(NBODYfile,"w");
-	
-	int hrplot = 0;
-	if (dtplot) hrplot = 1;
-	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
-		SSE12 = fopen(SSEfile,"w");
-		hrplot = 2;
-	}		
-	
-	
-	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 0\n");
-	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
-	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
-	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 1\n",bin, esc);
-	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
-	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
-	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
-	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
-//	if (tf == 1) {
-//		rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-//		fprintf(PAR,"%i %.8f\n",0,sqrt(1.0/(3.0*pow(rtide,3))));
-	if (tf == 2) {
-		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 3) {
-		//fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-		//new version including bulge potential:
-		fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen, GMB, AR, GAM);
-		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-	}
-	if (tf > 2) fprintf(PAR,"%.2f %.2f %.2f %.2f\n",extmass,extrad,extdecay,extstart);
-	
-	
-	
-	//write to .NBODY file
-	int j;
-	for (j=0;j<N;j++) {
-		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
-	}
-
-	//write to .fort.12 file
-	if (sse) {
-		for (j=0;j<N;j++) {
-			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
-					//,star[j][13],star[j][14]);
-		}
-	}
-	
-	fclose(PAR);
-	fclose(NBODY);
-	if (bin == 5) {
-		fclose(SSE12);
-		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
-	} else {
-		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
-	}
-	return 0;
-	
-}
-
-int output3(char *output, int N, double rvir, double rh, double mmean, double M, double epoch, double Z, double *RG, double *VG, double rtide, double **star, double Rgal, double extmass, double extrad){
-	//Open output files
-	char tablefile[20];		
-	FILE *TABLE;
-	sprintf(tablefile, "%s.txt",output);
-	TABLE = fopen(tablefile,"w");
-	
-	
-	//write to .txt file
-	int i, j;
-	//fprintf(TABLE,"# Star cluster generated by McLuster with the following parameters:\n");
-	//fprintf(TABLE,"#\n");
-	//fprintf(TABLE,"# Mass = %.3lf\t(%i stars with mean mass of %.3f)\n",M,N,mmean);
-	//fprintf(TABLE,"# Half-mass radius, virial radius, tidal radius = %.3lf pc, %.3lf pc, %.3lf pc\n",rh, rvir, rtide);
-	//fprintf(TABLE,"# Galactic orbit (RGx,RGy,RGz),(VGx,VGy,VGz) = (%.3lf,%.3lf,%.3lf) pc, (%.3lf,%.3lf,%.3lf) km/s\n",RG[0],RG[1],RG[2],VG[0],VG[1],VG[2]);
-	//fprintf(TABLE,"# Age = %.3lf Myr\n",epoch);
-	//fprintf(TABLE,"# Metallicity = %.3lf\n",Z);
-	//fprintf(TABLE,"#\n");
-	
-    
-    double epot, gaspot, vscale;
-    epot = 0.0;
-    gaspot = 0.0;
-    
-    //rescale velocities to include effect of gas potential
-    if (extmass) {
-#ifndef NOOMP
-#pragma omp parallel shared(N, star)  private(i, j)
-		{
-#pragma omp for reduction(+: epot, gaspot) schedule(dynamic)
-#endif
-        for (j=0; j<N; j++) {
-			if (j) {
-                //cluster binding energy
-                for (i=0;i<j-1;i++)
-					epot -= star[i][0]*star[j][0]/sqrt((star[i][1]-star[j][1])*(star[i][1]-star[j][1])+(star[i][2]-star[j][2])*(star[i][2]-star[j][2])+(star[i][3]-star[j][3])*(star[i][3]-star[j][3]));
-                //external gas potential binding energy
-                gaspot -= star[j][0]/extrad*extmass/sqrt(1.0+(star[j][1]*star[j][1]+star[j][2]*star[j][2]+star[j][3]*star[j][3])/(extrad*extrad));
-            }
-		}
-#ifndef NOOMP
-		}
-#endif
-
-        vscale = sqrt(1.0+0.5*gaspot/epot);
-        
-        for (j=0; j<N; j++) {
-            star[j][4] *= vscale;
-            star[j][5] *= vscale;
-            star[j][6] *= vscale;
-        }
-        
-        printf("\nVelocities rescaled to virial equilibrium in Plummer background potential with mass of %.2g Msun and a Plummer radius of %2.f pc.\n", extmass, extrad);
-
-    }
-    
-
-    
-    
-#ifdef SSE
-	double abvmag, vmag, BV, Teff, dvmag, dBV;
-	fprintf(TABLE,"#Mass_[Msun]\tx_[pc]\t\t\ty_[pc]\t\t\tz_[pc]\t\t\tvx_[km/s]\t\tvy_[km/s]\t\tvz_[km/s]\t\tMass(t=0)_[Msun]\tkw\tepoch1_[Myr]\tspin\t\tR_[Rsun]\tL_[Lsun]\tepoch_[Myr]\tZ\t\tM_V_[mag]\tV_[mag]\t\tB-V_[mag]\tT_eff_[K]\tdV_[mag]\td(B-V)\n");
-	for (j=0;j<N;j++) {
-		cmd(star, j, Rgal, &abvmag, &vmag, &BV, &Teff, &dvmag, &dBV);
-		fprintf(TABLE,"%8lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%8lf\t\t%.0lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\t%8lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6],star[j][7],star[j][8],star[j][9],star[j][10],star[j][11],star[j][12],star[j][13],star[j][14], abvmag, vmag, BV, Teff, dvmag, dBV);
-	}
-#else	
-	fprintf(TABLE,"#Mass_[Msun]\tx_[pc]\t\t\ty_[pc]\t\t\tz_[pc]\t\t\tvx_[km/s]\t\tvy_[km/s]\t\tvz_[km/s]\n");
-	for (j=0;j<N;j++) {
-		fprintf(TABLE,"%8lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
-	}	
-#endif
-	fclose(TABLE);
-	printf("\nData written to %s\n", tablefile);
-	
-	return 0;
-	
-}
-
-int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
-	
-	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.input",output);
-	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.fort.10",output);
-	NBODY = fopen(NBODYfile,"w");
-	
-	int hrplot = 0;
-	if (dtplot) hrplot = 1;
-	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
-		SSE12 = fopen(SSEfile,"w");
-		hrplot = 2;
-	}		
-	
-	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 0\n");
-	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
-	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
-	fprintf(PAR,"-1 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 0 1 0 -1\n",bin,esc);
-	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
-	fprintf(PAR,"0 1 0 1 0 0 0 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
-	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
-	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
-	if (tf == 2) {
-		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 3) {
-		//old version:
-		//fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-		
-		//new version including bulge potential:
-		fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6e %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC, GMB, AR, GAM);
-		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-	}
-	if (tf > 2)	fprintf(PAR,"%.6f %.6f %.6f %.6f\n",extmass,extrad,extdecay,extstart);
-	fprintf(PAR,"10000.0 2 0\n");
-	
-	//write to .fort.10 file
-	int j;
-	for (j=0;j<N;j++) {
-		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
-	}
-	
-	//write to .fort.12 file
-	if (sse) {
-		for (j=0;j<N;j++) {
-			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
-			//,star[j][13],star[j][14]);
-		}
-	}
-	
-	fclose(PAR);
-	fclose(NBODY);
-	if (bin == 5) {
-		fclose(SSE12);
-		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
-	} else {
-		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
-	}
-	
-	return 0;
-    
-}
-
-int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
-
-	//Open output files
-	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
-	sprintf(PARfile, "%s.input",output);
-	PAR = fopen(PARfile,"w");
-	sprintf(NBODYfile, "%s.dat.10",output);
-	NBODY = fopen(NBODYfile,"w");
-	
-	int hrplot = 0;
-	if (dtplot) hrplot = 1;
-	if (sse) {
-		sprintf(SSEfile, "%s.fort.12",output);
-		SSE12 = fopen(SSEfile,"w");
-		hrplot = 2;
-	}		
-	
-	
-	//write to .PAR file	
-	fprintf(PAR,"1 5000000.0 5000000.0 40 40 0\n");
-	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
-	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
-	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
-	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 6 %i 0 1 2 2 0 0 1\n", esc);
-	fprintf(PAR,"1 0 3 2 1 0 0 2 0 0\n");
-	fprintf(PAR,"0 0 0 0 0 1 2 0 0 0\n");
-	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001 0.125\n");
-	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
-	fprintf(PAR,"%.2f 0.0 0.0 0.00000\n",Q);
-//	if (tf == 1) {
-//		rtide = pow(1.0*M/(3.0*M1pointmass),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
-//		fprintf(PAR,"%i %.8f\n",0,sqrt(1.0/(3.0*pow(rtide,3))));
-	if (tf == 2) {
-		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 3) {
-		//fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-		//new version including bulge potential:
-		fprintf(PAR,"%.6e %.6f %.6e %.6f %.6f %.6e %.6f %.6f %.6f %.6f\n",M1allen,b1allen,M2allen,a2allen,b2allen,M3allen,a3allen, GMB, AR, GAM);
-		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
-	}
-	if (tf > 2) fprintf(PAR,"%.2f %.2f %.2f %.2f\n",extmass,extrad,extdecay,extstart);
-	
-	
-	
-	//write to .NBODY file
-	int j;
-	for (j=0;j<N;j++) {
-		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
-	}
-
-	//write to .fort.12 file
-	if (sse) {
-		for (j=0;j<N;j++) {
-			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
-					//,star[j][13],star[j][14]);
-		}
-	}
-	
-	fclose(PAR);
-	fclose(NBODY);
-	if (bin == 5) {
-		fclose(SSE12);
-		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
-	} else {
-		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
-	}
-	return 0;
-	
-} */
 
 void info(char *output, int N, double Mcl, int profile, double W0, double S, double D, double Q, double Rh, double gamma[], double a, double Rmax, double tcrit, int tf, double RG[], double VG[], int mfunc, double single_mass, double mlow, double mup, double alpha[], double mlim[], double alpha_L3, double beta_L3, double mu_L3, int weidner, int mloss, int remnant, double epoch, double Z, int prantzos, int nbin, double fbin, int pairing, double msort, int adis, double amin, double amax, int eigen, int BSE, double extmass, double extrad, double extdecay, double extstart, int code, int seed, double dtadj, double dtout, double dtplot, int gpu, int regupdate, int etaupdate, int esc, int units, int match, int symmetry, int OBperiods) {
 	int i;
@@ -5285,67 +5138,3 @@ void info(char *output, int N, double Mcl, int profile, double W0, double S, dou
 	fclose(INFO);
 
 }
-
-
-/*
-
-void help(double msort) {
-	printf("\n Usage: mcluster -[N|M|P|W|R|r|c|g|S|D|T|Q|C|A|O|G|o|f|a|m|B|b|p|s|t|e|Z|X|V|x|u|h|?]\n");
-	printf("                                                                     \n");
-	printf("       -N <number> (number of stars)                                 \n");
-	printf("       -M <value> (mass of cluster; specify either N or M)           \n");
-	printf("       -P <0|1|2|3|-1> (density profile; 0= Plummer, 1= King (1966), \n");
-	printf("                   2= Subr et al. (2007) mass-segregated,            \n");
-	printf("                   3= 2-dimensional EFF/Nuker template,              \n");
-	printf("                   -1= no density gradient)                          \n");
-	printf("       -W <1-12> (W0 parameter for King model)                       \n");
-	printf("       -R <value> (half-mass radius [pc], ignored for P = 3)         \n");
-	printf("       -r <value> (scale radius of EFF/Nuker template [pc])          \n");
-	printf("       -c <value> (cut-off radius of EFF/Nuker template [pc])        \n");
-	printf("       -g <value> (power-law slope(s) of EFF/Nuker template; use     \n");
-	printf("                   once for EFF template; use three times for Nuker  \n");
-	printf("                   template (outer slope, inner slope, transition)   \n");
-	printf("       -S <0.0-1.0> (degree of mass segregation; 0.0= no segregation)\n");
-	printf("       -D <1.6-3.0> (fractal dimension; 3.0= no fractality)          \n");
-	printf("       -T <value> (tcrit in N-body units)                            \n");
-	printf("       -Q <value> (virial ratio)                                     \n");
-	printf("       -C <0|1|3|5> (code; 0= Nbody6, 1= Nbody4, 3= table of stars, 5= Nbody6++)    \n");
-	printf("       -A <value> (dtadj in N-body units)                            \n");
-	printf("       -O <value> (deltat in N-body units)                           \n");
-	printf("       -G <0|1> (GPU usage; 0= no GPU, 1= use GPU)                   \n");
-	printf("       -o <name> (output name of cluster model)                      \n");
-	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, 1= Kroupa (2001),             \n");
-	printf("             2= user defined, 3= Kroupa (2001) with optimal sampling,\n");
-	printf("             4= L3 IMF (Maschberger 2012))                           \n");
-	printf("       -a <value> (IMF slope; for user defined IMF, may be used      \n"); 
-	printf("                   multiple times, from low mass to high mass;       \n");
-	printf("                   for L3 IMF use three times for alpha, beta and mu)\n");
-	printf("       -m <value> (IMF mass limits, has to be used multiple times    \n");
-	printf("                 (at least twice), from low mass to high mass [Msun])\n");
-	printf("       -B <number> (number of binary systems)                        \n");
-	printf("       -b <value> (binary fraction, specify either B or b)           \n");
-	printf("       -p <0|1|2|3> (binary pairing, 0= random, 1= ordered for M>%.1f Msun,\n",msort);
-	printf("                   2= random but separate pairing for M>%.1f Msun)\n",msort);
-	printf("                   3= random but uniform distribution of mass ratio (0.1<q<1.0) for M>%.1f Msun)\n",msort);
-	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
-	printf("       -t <0|1|2|3> (tidal field; 0= no tidal field, 1= near-field,  \n");
-	printf("                    2= point-mass, 3= Milky-Way potential)           \n");
-	printf("       -e <value> (epoch for stellar evolution [Myr])                \n");
-	printf("       -Z <value> (metallicity [0.0001-0.03, 0.02 = solar])          \n");
-	printf("       -X <value> (galactocentric radius vector, use 3x, [pc])       \n");
-	printf("       -V <value> (cluster velocity vector, use 3x, [km/s])          \n");
-	printf("       -x <value> (specify external (gas) Plummer potential, use 4x, \n");
-	printf("                  1. gas mass [Msun], 2. Plummer radius [pc]         \n");
-	printf("                  3. decay time for gas expulsion [Myr], 4. delay    \n");
-	printf("                  time for start of gas expulsion [Myr])             \n");
-	printf("       -u <0|1> (output units; 0= Nbody, 1= astrophysical)           \n");
-	printf("       -h (display this help)                                        \n");
-	printf("       -? (display this help)                                        \n");
-	printf("                                                                     \n");
-	printf(" Examples: mcluster -N 1000 -R 0.8 -P 1 -W 3.0 -f 1 -B 100 -o test1  \n");
-	printf("           mcluster -f 2 -m 0.08 -a -1.35 -m 0.5 -a -2.7 -m 100.0    \n");
-	printf("           mcluster -t 3 -X 8500 -X 0 -X 0 -V 0 -V 220 -V 0          \n");
-	printf("           mcluster -D 1.6 -Q 0.4 -P -1                              \n");
-	printf("                                                                     \n");
-
-}  */
