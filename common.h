@@ -15,13 +15,13 @@
      &       beta_L3, mu_L3, amin, amax, epoch_pop,
      &       zini_pop, fractal
 
-      character(len=100) :: npopchar,fracbchar, initmodelchar, w0char,
+      character(len=1000) :: npopchar,fracbchar, initmodelchar, w0char,
      &       conc_popchar, Segchar, fractalchar,
      &       imfgchar, equalmasschar, mlowchar, mupchar,
      &       alpha_L3char, beta_L3char, mu_L3char, pairingchar,
      &       adischar, eigenchar, aminchar, amaxchar,
      &       zinichar, epochchar
-      character(len=1000) :: mlimimfchar, alphaimfchar
+      character(len=100000) :: mlimimfchar, alphaimfchar
 
       common /mclusterarri/  npop, initmodel, imfg, pairing, adis,
      &        eigen

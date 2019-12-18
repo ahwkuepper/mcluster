@@ -76,8 +76,7 @@ int main (int argv, char **argc) {
 	 *******************/
 	
 	//Basic physical parameters
-        input_();
-
+    input_();
 	int i;
    	int N[10], profile[10], mfunc[10], pairing[10], adis[10], OBperiods[10], eigen[10];
 	double fbin[10], conc_pop[10], W0[10], S[10], D[10], a[10], Rmax[10], single_mass[10], mlow[10], mup[10], alpha_L3[10], beta_L3[10], mu_L3[10], msort[10], amin[10], amax[10], epoch[10], Z[10];
@@ -126,6 +125,7 @@ int main (int argv, char **argc) {
 
 	double **mlim;
 	mlim = (double **)calloc(10,sizeof(double *));
+
 	for (p=0;p<10;p++){
 		mlim[p] = (double *)calloc(MAX_MN,sizeof(double));
 	}
@@ -143,8 +143,7 @@ int main (int argv, char **argc) {
 	int BSE = 1;					//Apply binary star evolution using BSE (Hurley, Tout & Pols 2002) =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
 #else
 	int BSE = 0;					//Apply binary star evolution using BSE (Hurley, Tout & Pols 2002) [needs special compiling and BSE]; =0 off, =1 on [use either eigenevolution or BSE; BSE recommended when using SSE]
-#endif
-	
+#endif	
 	//Gas parameters (only used for Nbody6 input)
 	double extmass = 0.0;			//external Plummer (gas) sphere mass [Msun]
 	double extrad = 0.0;			//external Plummer (gas) sphere scale factor [pc]
@@ -168,7 +167,7 @@ int main (int argv, char **argc) {
 	int symmetry = 1;				//Force spherical symmetry for fractal clusters; =0 off, =1 on (recommended)
 	int check = 0;					//Make energy check at end of McLuster; =0 off, =1 on
 	double Zsun = 0.02;				//Solar metallicity
-	int NMAX = 2000000;	     		//Maximum number of stars & orbits allowed in McLuster
+	int NMAX = 200000;	     		//Maximum number of stars & orbits allowed in McLuster
 	int NNBMAX_NBODY6 = 500;		//Maximum number of neighbours allowed in NBODY6
 	double upper_IMF_limit = 150.0; //Maximum stellar mass allowed in McLuster [Msun]
 	int an[10] = {0,0,0,0,0,0,0,0,0,0};						//Counter for number of alpha slopes for mfunc = 2
@@ -1315,7 +1314,8 @@ int main (int argv, char **argc) {
 			for (i=4;i<7;i++)
 				star[j][i] *= rvir/tscale;
 		}
-	
+		
+		printf("Converting in physical units: tscale = %f, rvir = %f\n, Mtotal = %f", tscale,rvir,Mtotal);	
 		char *tablefile = "dat.10";
 		FILE *TABLE;
 	

@@ -48,9 +48,6 @@
 
       ! check if there are unrecognized parameters in the mocca.ini file
       call config_validate(conf)
-
-      key = "Mcluster:mclusteron"
-      call config_getint(mclusteron, 1, key, conf);
      
       key = "Mcluster:n"
       call config_getstr(npopchar, "100000", key, conf);
