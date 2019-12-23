@@ -62,42 +62,41 @@ void char_to_arraydouble_(char str[], double *array){
 	}
 }
 
-void config_validate_(const char conf[1000]) {
+void config_validate_(const char conf[10000]) {
 	dictionary * dict = iniparser_load(conf);
 
 	int i, k, m, secCount, keysCount, found;
 	char* secName;
 	char** keys;
-	const int expectedCount = 31;
+	const int expectedCount = 30;
 	char* expected[expectedCount];
 
 	if (dict == NULL)
 		return;
 
-	expected[0] = "mcluster:mclusteron";
-	expected[1] = "mcluster:n";
-	expected[2] = "mcluster:fracb";
-	expected[3] = "mcluster:initialmodel";
-	expected[4] = "mcluster:w0";
-	expected[5] = "mcluster:s";
-	expected[6] = "mcluster:fractal";
-	expected[7] = "mcluster:qvir";
-	expected[8] = "mcluster:mfunc";
-	expected[9] = "mcluster:single_mass";
-	expected[10] = "mcluster:mlow";
-	expected[11] = "mcluster:mup";
-	expected[12] = "mcluster:alpha_imf";
-	expected[13] = "mcluster:mlim_imf";
-	expected[14] = "mcluster:alpha_l3";
-	expected[15] = "mcluster:beta_l3";
-	expected[16] = "mcluster:mu_l3";
-	expected[17] = "mcluster:pairing";
-	expected[18] = "mcluster:adis";
-	expected[19] = "mcluster:eigen";
-	expected[20] = "mcluster:amin";
-	expected[21] = "mcluster:amax";
-	expected[22] = "mcluster:tf";
-	expected[29] = "mcluster:rbar";
+	expected[0] = "mcluster:n";
+	expected[1] = "mcluster:fracb";
+	expected[2] = "mcluster:initialmodel";
+	expected[3] = "mcluster:w0";
+	expected[4] = "mcluster:S";
+	expected[5] = "mcluster:fractal";
+	expected[6] = "mcluster:qvir";
+	expected[7] = "mcluster:mfunc";
+	expected[8] = "mcluster:single_mass";
+	expected[9] = "mcluster:mlow";
+	expected[10] = "mcluster:mup";
+	expected[11] = "mcluster:alpha_imf";
+	expected[12] = "mcluster:mlim_imf";
+	expected[13] = "mcluster:alpha_l3";
+	expected[14] = "mcluster:beta_l3";
+	expected[15] = "mcluster:mu_l3";
+	expected[16] = "mcluster:pairing";
+	expected[17] = "mcluster:adis";
+	expected[18] = "mcluster:eigen";
+	expected[19] = "mcluster:amin";
+	expected[20] = "mcluster:amax";
+	expected[21] = "mcluster:tf";
+	expected[22] = "mcluster:rbar";
 	expected[23] = "mcluster:rh_mcl";
 	expected[24] = "mcluster:conc_pop";
 	expected[25] = "mcluster:potential_energy";
@@ -124,7 +123,7 @@ void config_validate_(const char conf[1000]) {
 			}
 
 			if (found == 0) {
-				printf("WARNING: key %s from mocca.ini is not recognized! Check the file mocca.ini for errors.\n", keys[k]);
+				printf("WARNING: key %s from mcluster.ini is not recognized! Check the file mocca.ini for errors.\n", keys[k]);
 			}
 		}
 	}

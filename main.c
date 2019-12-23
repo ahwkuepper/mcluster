@@ -935,12 +935,15 @@ int main (int argv, char **argc) {
 //	if (extstart) extstart = extstart/tscale;
 //		}
 
+
+	double sx = 0.0;
+	double sv = 0.0;
 	if(!pot_energy_MOCCA){
 	//apply scaling to Nbody-units
 		printf("\nRe-scaling of orbits (dt ~ N^2!)\n");
 		double ke = 0.0;
 		double pe = 0.0;
-		double sx, sv, r2;
+		double r2;
 #ifdef GPU
 		gpupot(Ntot,star,&pe);
 #ifndef NOOMP
@@ -965,7 +968,7 @@ int main (int argv, char **argc) {
 			if (i) {
 				for (j=0;j<i-1;j++) {
 					r2 = (star[i][1]-star[j][1])*(star[i][1]-star[j][1]) + (star[i][2]-star[j][2])*(star[i][2]-star[j][2]) +(star[i][3]-star[j][3])*(star[i][3]-star[j][3]) ;
-					pe -=  star[i][0]*star[j][0]/sqrt(r2);
+					pe -=  (star[i][0]/Mtotal)*(star[j][0]/Mtotal)/sqrt(r2);
 				}
 			}
 			ke += (star[i][0]/Mtotal)*(pow(star[i][4],2)+pow(star[i][5],2)+pow(star[i][6],2));
@@ -990,9 +993,6 @@ int main (int argv, char **argc) {
 		//printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
 	}
 
-
-	double sx = 0.0;
-	double sv = 0.0;
 	if (pot_energy_MOCCA){ 
 			printf("\nEnergy calculated supposing spherical symmetry\n");
 
@@ -1020,7 +1020,6 @@ int main (int argv, char **argc) {
 			for (j=0;j<j_star;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
 			pe *= -1.0;
 			for (j=0;j<j_star;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
-
 			printf("\nRe-scaling of orbits (dt ~ N!)\n");
 			sx = 1.0/(4*(Qtot-1)*pe);
 			sv = sqrt(-Qtot/(4*(Qtot-1)*ke));
@@ -1032,7 +1031,32 @@ int main (int argv, char **argc) {
 				star[j][5] *= sv;
 				star[j][6] *= sv;
 			}
-		//printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
+			Mtot = 0.0;
+			for (j=0;j<j_star;j++){
+				Mtot = Mtot + star_temp[j][0];
+				star_temp[j][9] = Mtot;
+			}
+			//apply scaling to Nbody-units
+			rx = 0.0;
+			ux = 0.0;
+			uy = 0.0;
+			rx = star_temp[j_star-1][7]/sx;
+			ux = -Mtot/rx;
+			star_temp[j_star-1][8] = ux;
+			for (j=j_star-2;j>-1;j--){
+				Mtot = Mtot - star_temp[j+1][0];
+				ux = -Mtot/(star_temp[j][7]/sx);
+				uy = uy - star_temp[j+1][0]/rx;
+				rx = star_temp[j][7]/sx;
+				star_temp[j][8] = ux + uy;
+			}
+			ke = 0.0;
+			pe = 0.0;
+			for (j=0;j<j_star;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
+			pe *= -1.0;
+			for (j=0;j<j_star;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
+			printf ("\n Check energies: pe = %.5f\t ke = %.5f\t q = %.5f \n", pe,ke,ke/pe);
+//			printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
 	}
 	printf("\nAfter re-scaling orbits, rescaling factors sx %f, sv %f\n",sx,sv);
 
@@ -1298,12 +1322,14 @@ int main (int argv, char **argc) {
 				fprintf(sinmocca,"%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%f\t%f\t%d\n",star[j+Nsub][0], star[j+Nsub][1], star[j+Nsub][2], star[j+Nsub][3], star[j+Nsub][4], star[j+Nsub][5], star[j+Nsub][6], epoch[i],Z[i],i+1);
 			}
 		}
+		for (j=0; j<Ntot; j++) star[j][0] /= Mtotal;
+
 		fclose(sinmocca);
 		fclose(binmocca);
 		printf("\nData written to single_nbody.dat and binary_nbody.dat\n");
 	} else {
 		//scale masses, pos & vel to astrophysical units or Nbody units
-		tscale = sqrt(rvir*rvir*rvir/(G*Mtotal)); // to be consistent with old M
+/*		tscale = sqrt(rvir*rvir*rvir/(G*Mtotal)); // to be consistent with old M
 
 		for (j=0; j<Ntot; j++) {
 			for (i=1;i<4;i++)
@@ -1316,13 +1342,15 @@ int main (int argv, char **argc) {
 		}
 		
 		printf("Converting in physical units: tscale = %f, rvir = %f\n, Mtotal = %f", tscale,rvir,Mtotal);	
+*/
+		for (j=0; j<Ntot; j++) star[j][0] /= Mtotal;
 		char *tablefile = "dat.10";
 		FILE *TABLE;
 	
 		TABLE = fopen(tablefile,"w");
-		fprintf(TABLE,"#Mass_[Msun]\tx_[pc]\t\t\ty_[pc]\t\t\tz_[pc]\t\t\tvx_[km/s]\t\tvy_[km/s]\t\tvz_[km/s]\n");
+		fprintf(TABLE,"#Mass\tx\t\t\ty\t\t\tz\t\t\tvx\t\tvy\t\tvz\n");
 		for (j=0;j<Ntot;j++) {
-			fprintf(TABLE,"%8lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\t%.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
+			fprintf(TABLE,"%.16e\t%.16e\t%.16e\t%.16e\t%.16e\t%.16e\t%.16e\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
 		}	
 		fclose(TABLE);
 		printf("\nData written to %s\n", tablefile);
@@ -1332,16 +1360,30 @@ int main (int argv, char **argc) {
 	 **********************/
 
 	printf("\n\n-----FINISH-----  \n"); 
-/*
-	if (check) {
+
+//	if (check) {
 		printf("\nMaking final energy check... (may take a while but can be aborted by pressing CTRL+c)\n");
+		for (int ii=0;ii<numberofpop;ii++){ 
+			if (ii == 0){
+				Nsub = 0;
+				Nbinsub = 0;
+			} else {
+				Nsub += N[ii-1];
+				Nbinsub += nbin[ii-1];
+			}
+			for (int jj=0;jj<nbin[ii];jj++){
+				ekin += (star[2*jj+Nsub][0]+star[2*jj+1+Nsub][0]) * ( pow(cmb[jj+Nbinsub][3],2) + pow(cmb[jj+Nbinsub][4],2) + pow(cmb[jj+Nbinsub][5],2) );
+			}	
+			for (int jj=nbin[ii]*2;jj<N[ii];jj++) {
+				ekin += star[jj+Nsub][0]*((star[jj+Nsub][4]*star[jj+Nsub][4])+(star[jj+Nsub][5]*star[jj+Nsub][5])+(star[jj+Nsub][6]*star[jj+Nsub][6]));
+			}
+		}
 #ifndef NOOMP
 #pragma omp parallel shared(N, star)  private(i, j)
 		{
-#pragma omp for reduction(+: ekin, epot, sigma) schedule(dynamic)
+#pragma omp for reduction(+: epot, sigma) schedule(dynamic)
 #endif
 			for (j=0; j<Ntot; j++) {
-			ekin += star[j][0]*((star[j][4]*star[j][4])+(star[j][5]*star[j][5])+(star[j][6]*star[j][6]));
 			if (j) {
 				for (i=0;i<j-1;i++) 
 					epot -= star[i][0]*star[j][0]/sqrt((star[i][1]-star[j][1])*(star[i][1]-star[j][1])+(star[i][2]-star[j][2])*(star[i][2]-star[j][2])+(star[i][3]-star[j][3])*(star[i][3]-star[j][3]));
@@ -1351,20 +1393,21 @@ int main (int argv, char **argc) {
 #ifndef NOOMP
 		}
 #endif
-		if (units) epot *= G;
+
+//		if (units) epot *= G;
 		ekin *= 0.5;
 		sigma = sqrt(sigma/Ntot);
-		tscale = sqrt(rvir[0]*rvir[0]*rvir[0]/(G*Mtotal));
+//		tscale = sqrt(rvir*rvir*rvir/(G*Mtotal));
 	
 		printf("\nEkin = %g\t Epot = %g\t Etot = %g \t kT = %g", ekin, epot, ekin+epot, ekin/(Ntot-Nbintot));
 		printf("\nVel.Disp. = %g\tCross.Time = %g \n", sigma, 2.0/sigma);
-		if (units) printf("Vel.Disp. = %g\tCross.Time = %g (Nbody units)\n", sigma/rvir[0]*tscale, 2.0/sigma/tscale);
-		else printf("Vel.Disp. = %g\tCross.Time = %g (physical units, km/s, Myr)\n", sigma*rvir[0]/tscale, 2.0/sigma*tscale);
-	}
+//		if (units) printf("Vel.Disp. = %g\tCross.Time = %g (Nbody units)\n", sigma/rvir[0]*tscale, 2.0/sigma/tscale);
+//		else printf("Vel.Disp. = %g\tCross.Time = %g (physical units, km/s, Myr)\n", sigma*rvir[0]/tscale, 2.0/sigma*tscale);
+//	}
 
 	
 
-*/	
+
 #ifdef NOOMP
 	t2 = clock();														//stop stop-watch
 	printf("\nElapsed time: %g sec\n",(double)(t2-t1)/CLOCKS_PER_SEC);	//print stopped time	
