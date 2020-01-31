@@ -68,7 +68,7 @@ void config_validate_(const char conf[10000]) {
 	int i, k, m, secCount, keysCount, found;
 	char* secName;
 	char** keys;
-	const int expectedCount = 30;
+	const int expectedCount = 31;
 	char* expected[expectedCount];
 
 	if (dict == NULL)
@@ -104,7 +104,7 @@ void config_validate_(const char conf[10000]) {
 	expected[27] = "mcluster:zini";
 	expected[28] = "mcluster:seedmc";
 	expected[29] = "mcluster:outputf";
-
+	expected[30] = "mcluster:check_en";
 
 	secCount = iniparser_getnsec(dict);
 	for (i = 0; i < secCount; ++i) {
