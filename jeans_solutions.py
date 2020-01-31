@@ -29,9 +29,9 @@ def jeans_equation_solution():
   m = []
   r = []
   for x in lines:
-    rho.append(float(x.split(' ')[0]))
-    m.append(float(x.split(' ')[1]))
-    r.append(float(x.split(' ')[2]))
+    r.append(float(x.split(' ')[0]))
+    rho.append(float(x.split(' ')[1]))
+    m.append(float(x.split(' ')[2]))
   g.close()
   rho = np.array(rho); r = np.array(r); m = np.array(m)
   ngrd=30000

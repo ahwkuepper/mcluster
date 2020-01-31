@@ -165,14 +165,13 @@ int main (int argv, char **argc) {
 
 	//McLuster internal parameters
 	int symmetry = 1;				//Force spherical symmetry for fractal clusters; =0 off, =1 on (recommended)
-	int check = 0;					//Make energy check at end of McLuster; =0 off, =1 on
+	int check = mclusteri_.check_en;					//Make energy check at end of McLuster; =0 off, =1 on
 	double Zsun = 0.02;				//Solar metallicity
 	int NMAX = 200000;	     		//Maximum number of stars & orbits allowed in McLuster
 	int NNBMAX_NBODY6 = 500;		//Maximum number of neighbours allowed in NBODY6
 	double upper_IMF_limit = 150.0; //Maximum stellar mass allowed in McLuster [Msun]
 	int an[10] = {0,0,0,0,0,0,0,0,0,0};						//Counter for number of alpha slopes for mfunc = 2
 	int mn[10] = {0,0,0,0,0,0,0,0,0,0};						//Counter for number of mass limits for mfunc = 1, 2 & 4
-	
 	//SSE internal parameters (see Hurley, Pols & Tout 2000) 
 	value1_.neta = 0.5;			//Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally)
 	value1_.bwind = 0.0;		//Binary enhanced mass loss parameter (inactive for single)
@@ -462,6 +461,20 @@ int main (int argv, char **argc) {
 		Mtotal += M[i];
 	}//END CICLE FOR GENERATE MASS FOR MULTIPLE POPULATIONS OR FOR SINGLE POPULATION
 
+	
+	double ***rho_dens;
+	rho_dens = (double **)calloc(numberofpop,sizeof(double **));
+	for (i=0;i<numberofpop;i++){ 
+		rho_dens[i] = (double **)calloc(N[i],sizeof(double *));
+		for (j=0;j<N[i];j++){
+			rho_dens[i][j] = (double *)calloc(2,sizeof(double));
+			if (rho_dens[i][j] == NULL) {
+				printf("\nMemory allocation failed!\n");
+				return 0;
+			}
+		}
+	}
+
 	for(j=0;j<numberofpop;j++) printf("\n Mass %i generation: \t%.3f\n", j+1, M[j]);
 	printf("\n Total mass %.3f\n",Mtotal);
 
@@ -571,7 +584,7 @@ int main (int argv, char **argc) {
 				mbin[j+Nbinsub][12] = star[2*j+Nsub+1][10]; //secondary spin
 				mbin[j+Nbinsub][13] = star[2*j+Nsub+1][11]; //secondary r
 				mbin[j+Nbinsub][14] = star[2*j+Nsub+1][12]; //secondary lum
-				mbin[j+Nbinsub][15] = 1000+j+Nsub; //identifier
+				mbin[j+Nbinsub][15] = 1000+(j+Nsub); //identifier
 				mbin[j+Nbinsub][16] = star[2*j+Nsub][13]; //primary epochstar
 				mbin[j+Nbinsub][17] = star[2*j+Nsub+1][13]; //secondary epochstar
 				mbin[j+Nbinsub][18] = star[2*j+Nsub][14]; //primary zstar
@@ -579,7 +592,7 @@ int main (int argv, char **argc) {
 
 				star[2*j+Nsub][0] += star[2*j+Nsub+1][0]; //system mass
 				star[2*j+Nsub+1][0] = 0.0;
-				star[2*j+Nsub][7] = 1000+j+Nsub; //identifier
+				star[2*j+Nsub][7] = 1000+(j+Nsub); //identifier
 				star[2*j+Nsub+1][7] = 0.0; //identifier
 				star[2*j+Nsub][12] += star[2*j+Nsub+1][12]; //system luminosity
 				star[2*j+Nsub+1][12] = 0.0;
@@ -618,12 +631,15 @@ int main (int argv, char **argc) {
 			N[i] = Nseg;
 		}
 
+		double cc;
+		if(i==0) cc=1.0;
+		else cc = conc_pop[i-1];
 
 		//generate scaled pos & vel, postpone scaling for Plummer and King in case of mass segregation
 		double rhking[10], rvirking[10], rking[10];
 		if (profile[i] == 2) {
 			printf("\nGenerating King model with parameters: N = %i\t W0 = %g\t D = %.2f\n",N[i], W0[i], D[i]);
-			generate_king(N[i], W0[i], star, &rvirking[i], &rhking[i], &rking[i], D[i], symmetry, Nsub);
+			generate_king(N[i], W0[i], star, &rvirking[i], &rhking[i], &rking[i], D[i], symmetry, Nsub, rho_dens[i], cc, M[i], Mtotal);
 		} else if (profile[i] == 3) {
 			N[i] = Nunseg;
 			printf("\nGenerating segregated Subr model with parameters: N = %i\t S = %g\t\n",N[i], S[i]);
@@ -697,13 +713,13 @@ int main (int argv, char **argc) {
 				}
 			} else {
 				if(i==0){
-						double perc = Mtotal/M[i];
+					double perc = Mtotal/M[i];
 					rvir = (perc)*(rh_mcl)/0.772764;
-			} else {
+				} else {
 					rvir = rh_mcl/0.772764; // for no tidal field rplum = Rh
+				}
 			}
-			}
-			generate_plummer(N[i], star, rtide, rvir, D[i], symmetry, Qtot, Nsub);
+			generate_plummer(N[i], star, rtide, rvir, D[i], symmetry, Qtot, Nsub, rho_dens[i], cc, M[i], Mtotal);
 		}
 
 		//Apply Baumgardt et al. (2008) mass segregation
@@ -797,7 +813,7 @@ int main (int argv, char **argc) {
 	double **star_temp;
 	star_temp = (double **)calloc(Ntot,sizeof(double *));
 	for (j=0;j<Ntot;j++){
-		star_temp[j] = (double *)calloc(10,sizeof(double));
+		star_temp[j] = (double *)calloc(11,sizeof(double));
 		if (star_temp[j] == NULL) {
 			printf("\nMemory allocation failed!\n");
 			return 0;
@@ -829,21 +845,76 @@ int main (int argv, char **argc) {
 //CALL JEANS EQUATION TO OBTAIN STARS' VELOCITIES (ONLY FOR MSP)
 
 	if(numberofpop>1){
-		double *volume, *radius, *rho, *cummass,mommass;
-		volume = (double *)calloc(Ntot,sizeof(double));
-		radius = (double *)calloc(Ntot,sizeof(double));
-		rho = (double *)calloc(Ntot,sizeof(double));
-		cummass = (double *)calloc(Ntot,sizeof(double));
-
-		for (j=0;j<j_star;j++) {
-				volume[j] =  4.0/3.0*PI*pow(star_temp[j][7],3); //volume
+		printf("\n Multiple stellar population detected: solving Jeans equation\n");
+		int density_calc = 0;
+		for (i=0;i<numberofpop;i++){ 
+		 	if(profile[i] > 2 || profile[i] == 0) density_calc = 1;
 		}
 
-		for (j=0;j<j_star;j++) {
-			mommass += star_temp[j][0];
-			cummass[j] = mommass; //cumulative mass
-			rho[j] = cummass[j]/volume[j]; //mass density
-			radius[j] = star_temp[j][7]; //radius
+		double **inputJE_vect;
+		inputJE_vect = (double **)calloc(j_star,sizeof(double *)); // [0] - r; [1] - rho; [2] - cummass
+		for (j=0;j<j_star;j++){
+			inputJE_vect[j] = (double *)calloc(3,sizeof(double));
+			if (inputJE_vect[j] == NULL) {
+				printf("\nMemory allocation failed!\n");
+				return 0;
+			}
+		}
+
+		if(density_calc == 0) {
+			for (i=0;i<numberofpop;i++){ 
+			 	shellsort_reverse(rho_dens[i], N[i], 2);
+			}
+
+			for(j=0;j<N[0];j++){
+				inputJE_vect[j][0] = rho_dens[0][j][0];
+				inputJE_vect[j][1] = rho_dens[0][j][1];
+			}
+
+			int Ndens = N[0];
+			for (i=1;i<numberofpop;i++){
+				printf(" Interpolating densities for population number %i\n",i+1 );
+				interpl_density(Ndens, N[i], i, j_star, inputJE_vect, star_temp, rho_dens);
+				Ndens += N[i];
+				shellsort_reverse(inputJE_vect, Ndens, 3);
+			}
+
+			for(j=0;j<j_star;j++){ 
+				if (j==0) inputJE_vect[j][2] = star_temp[j][0];
+				else inputJE_vect[j][2] = inputJE_vect[j-1][2] + star_temp[j][0];
+			}
+		} else {
+			int nspan = 5, i1,i2,jj;
+			double dr;
+
+			for (j=0;j<j_star;j++) {
+				if(j >= nspan) { 
+					i1 = j - nspan;
+					i2 = j + nspan;
+					if(i2 > j_star-1) {
+						i1 = j_star - 2*nspan;
+						i2 = j_star-1;
+	        		}
+				} else {
+					i1 = 0;
+					i2 = 2*nspan-1;
+					if(i2 >= j_star-1) i2 = j_star-1;
+				} // end
+
+				inputJE_vect[j][1] = 0.0;
+				for (jj=i1;jj<=i2;jj++){
+					inputJE_vect[j][1] += star_temp[jj][0];
+				}
+
+
+				dr = (star_temp[i2][7] - star_temp[i1][7]) * pow(star_temp[j][7],2); //Henon (1971b), Henon (1973)
+				inputJE_vect[j][1] /= ( (4.0*PI) * dr);
+
+				inputJE_vect[j][0] = star_temp[j][7];
+				if (j==0) inputJE_vect[j][2] = star_temp[j][0];
+				else inputJE_vect[j][2] = inputJE_vect[j-1][2] + star_temp[j][0];
+			}
+
 		}
 
 		FILE *inputJE;
@@ -851,10 +922,12 @@ int main (int argv, char **argc) {
 		fprintf(inputJE,"%i\n",j_star);
 		fprintf(inputJE,"%i\n",seed);
 		for (j=0;j<j_star;j++) {
-			fprintf(inputJE,"%.6f %.6f %.6f\n",rho[j],cummass[j],radius[j]);
+			fprintf(inputJE,"%.6e %.6e %.6e\n",inputJE_vect[j][0],inputJE_vect[j][1],inputJE_vect[j][2]);
 		}
 		fclose(inputJE);
-		free(volume), free(radius),free(rho),free(cummass);
+		
+		for (j=0;j<j_star;j++) free (inputJE_vect[j]);
+		free(inputJE_vect);
 
 		system("/home/agostino/python-virtualenvs/myenv2.7/bin/python jeans_solutions.py"); //solving jeans equation
 		FILE *outputJE;
@@ -1019,7 +1092,7 @@ int main (int argv, char **argc) {
 			double pe = 0.0;
 			for (j=0;j<j_star;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
 			pe *= -1.0;
-			for (j=0;j<j_star;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
+			for (j=0;j<Ntot;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
 			printf("\nRe-scaling of orbits (dt ~ N!)\n");
 			sx = 1.0/(4*(Qtot-1)*pe);
 			sv = sqrt(-Qtot/(4*(Qtot-1)*ke));
@@ -1031,6 +1104,7 @@ int main (int argv, char **argc) {
 				star[j][5] *= sv;
 				star[j][6] *= sv;
 			}
+			// checking energy
 			Mtot = 0.0;
 			for (j=0;j<j_star;j++){
 				Mtot = Mtot + star_temp[j][0];
@@ -1054,7 +1128,7 @@ int main (int argv, char **argc) {
 			pe = 0.0;
 			for (j=0;j<j_star;j++) pe = pe - 0.5*star_temp[j][0]*star_temp[j][8]; //potential energy for spherical symmetry
 			pe *= -1.0;
-			for (j=0;j<j_star;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
+			for (j=0;j<Ntot;j++) ke += 0.5*(star[j][0]/Mtotal)*(pow(star[j][4],2)+pow(star[j][5],2)+pow(star[j][6],2)); //kinetic energy
 			printf ("\n Check energies: pe = %.5f\t ke = %.5f\t q = %.5f \n", pe,ke,ke/pe);
 //			printf ("\nrvir = %.5f\t rh = %.5f\t rtide = %.5f (pc)\n", rvir, Rhtot*rvir, rtide);
 	}
@@ -1129,16 +1203,13 @@ int main (int argv, char **argc) {
 	 *********************/
 	if (seed) srand48(seed);
 
-	if(eigen[i]) {
-		double massbefore=0.0;
-		for (j=0;j<Ntot;j++){
-			massbefore += star[j][0];
-		}
-		printf("Total mass before  eigenevolution = %f\n", massbefore);
-	}
 	printf("\n\n-----GENERATE BINARIES-----   \n"); 
-	for (i=0;i<numberofpop;i++){ 
-	
+	for (i=0;i<numberofpop;i++){
+		if(eigen[i]) {
+			double massbefore=0.0;
+			for (j=0;j<Ntot;j++)	massbefore += star[j][0];
+			printf("Total mass before  eigenevolution = %f\n", massbefore);
+		}	
 //used to change the correct star array; star_array will be constructed as: Nbinaries_1_gen, Nsingle_1_gen, Nbinaries_2_gen, Nsingle_2_gen, ..
 		if (i == 0){
 			Nsub = 0;
@@ -1283,15 +1354,15 @@ int main (int argv, char **argc) {
 			get_binaries(nbin[i], star, M[i], rvir, pairing[i], &N[i], adis[i], amin[i], amax[i], Rhtot*rvir, Ntot, eigen[i], BSE, epoch[i], Z[i], remnant, OBperiods[i], msort[i], Nsub, Nbinsub,eccbinaries, abinaries, cmb);
 		} 
 
+		if(eigen[i]) {
+			double massafter=0.0;
+			for (j=0;j<Ntot;j++){
+				massafter += star[j][0];
+			}
+			printf("Total mass after  eigenevolution = %f\n", massafter);
+		}
 	}
 
-	if(eigen[i]) {
-		double massafter=0.0;
-		for (j=0;j<Ntot;j++){
-			massafter += star[j][0];
-		}
-		printf("Total mass after  eigenevolution = %f\n", massafter);
-	}
 	for (j=0;j<Nbintot;j++) free (mbin[j]);
 	free(mbin);
 
@@ -1316,7 +1387,7 @@ int main (int argv, char **argc) {
 			
 			for (j=0;j<nbin[i];j++){
 				fprintf(binmocca,"%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%f\t%f\t%d\n",eccbinaries[j+Nbinsub], abinaries[j+Nbinsub], star[2*j+Nsub][0], star[2*j+1+Nsub][0], cmb[j+Nbinsub][0], cmb[j+Nbinsub][1], cmb[j+Nbinsub][2], cmb[j+Nbinsub][3], cmb[j+Nbinsub][4], cmb[j+Nbinsub][5], epoch[i],Z[i],i+1);
-			}	
+			}
 
 			for (j=nbin[i]*2;j<N[i];j++) {
 				fprintf(sinmocca,"%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%.6e\t%f\t%f\t%d\n",star[j+Nsub][0], star[j+Nsub][1], star[j+Nsub][2], star[j+Nsub][3], star[j+Nsub][4], star[j+Nsub][5], star[j+Nsub][6], epoch[i],Z[i],i+1);
@@ -1361,23 +1432,37 @@ int main (int argv, char **argc) {
 
 	printf("\n\n-----FINISH-----  \n"); 
 
-//	if (check) {
-		printf("\nMaking final energy check... (may take a while but can be aborted by pressing CTRL+c)\n");
-		for (int ii=0;ii<numberofpop;ii++){ 
-			if (ii == 0){
-				Nsub = 0;
-				Nbinsub = 0;
-			} else {
-				Nsub += N[ii-1];
-				Nbinsub += nbin[ii-1];
-			}
-			for (int jj=0;jj<nbin[ii];jj++){
-				ekin += (star[2*jj+Nsub][0]+star[2*jj+1+Nsub][0]) * ( pow(cmb[jj+Nbinsub][3],2) + pow(cmb[jj+Nbinsub][4],2) + pow(cmb[jj+Nbinsub][5],2) );
-			}	
-			for (int jj=nbin[ii]*2;jj<N[ii];jj++) {
-				ekin += star[jj+Nsub][0]*((star[jj+Nsub][4]*star[jj+Nsub][4])+(star[jj+Nsub][5]*star[jj+Nsub][5])+(star[jj+Nsub][6]*star[jj+Nsub][6]));
-			}
+	if (check) {
+
+
+#ifdef NOOMP
+	t2 = clock();														//stop stop-watch
+	printf("\nElapsed time before final energy check: %g sec\n",(double)(t2-t1)/CLOCKS_PER_SEC);	//print stopped time	
+#else
+#pragma omp parallel
+	{
+		t2 = omp_get_wtime();//stop stop-watch
+	}
+	if (t2-t1 >= 60.0) printf("\nElapsed time before final energy check: %g min\n",(t2-t1)/60.0);	
+	else printf("\nElapsed time before final energy check: %g sec\n",t2-t1);	//print stopped time
+#endif
+
+	printf("\nMaking final energy check... (may take a while but can be aborted by pressing CTRL+c)\n");
+	for (i=0;i<numberofpop;i++){
+		if (i == 0){
+			Nsub = 0;
+			Nbinsub = 0;
+		} else {
+			Nsub += N[i-1];
+			Nbinsub += nbin[i-1];
 		}
+		for (j=0;j<nbin[i];j++){
+			ekin += (star[2*j+Nsub][0]+star[2*j+1+Nsub][0]) * ( pow(cmb[j+Nbinsub][3],2) + pow(cmb[j+Nbinsub][4],2) + pow(cmb[j+Nbinsub][5],2) );
+		}
+		for (j=nbin[i]*2;j<N[i];j++) {
+			ekin += star[j+Nsub][0]*( pow(star[j+Nsub][4],2) + pow(star[j+Nsub][5],2) + pow(star[j+Nsub][6],2) );
+		}
+	}
 #ifndef NOOMP
 #pragma omp parallel shared(N, star)  private(i, j)
 		{
@@ -1403,7 +1488,7 @@ int main (int argv, char **argc) {
 		printf("\nVel.Disp. = %g\tCross.Time = %g \n", sigma, 2.0/sigma);
 //		if (units) printf("Vel.Disp. = %g\tCross.Time = %g (Nbody units)\n", sigma/rvir[0]*tscale, 2.0/sigma/tscale);
 //		else printf("Vel.Disp. = %g\tCross.Time = %g (physical units, km/s, Myr)\n", sigma*rvir[0]/tscale, 2.0/sigma*tscale);
-//	}
+	}
 
 	
 
@@ -1416,7 +1501,8 @@ int main (int argv, char **argc) {
 	{
 		t2 = omp_get_wtime();//stop stop-watch
 	}
-	printf("\nElapsed time: %g sec\n",t2-t1);	//print stopped time
+	if (t2-t1 >= 60.0) printf("\nElapsed time: %g min\n",(t2-t1)/60.0);	
+	else printf("\nElapsed time: %g sec\n",t2-t1);	//print stopped time
 #endif
 	
 	for (j=0;j<NMAX;j++) free (star[j]);
@@ -2206,7 +2292,7 @@ double r8_abs(double x) {
 	return value;
 }
 
-int generate_plummer(int N, double **star, double rtide, double rvir, double D, int symmetry, double Q, int N2){
+int generate_plummer(int N, double **star, double rtide, double rvir, double D, int symmetry, double Q, int N2, double **rho_dens, double cc, double M, double mtot){
 	int i, h;
 	double a[9], ri, sx, sv, rcut;
 	double r_norm, v_norm;
@@ -2283,10 +2369,18 @@ int generate_plummer(int N, double **star, double rtide, double rvir, double D, 
 		star[i+N2][5] *= sv;
 		star[i+N2][6] *= sv;
 	}
+
+	double radius_plum, aplum=1.0/rvir;
+	for (int j=0;j<N;j++) {
+		radius_plum = sqrt( pow(star[j+N2][1],2) + pow(star[j+N2][2],2) + pow(star[j+N2][3],2) );
+		rho_dens[j][0] = radius_plum*cc;
+		rho_dens[j][1] = (3.0*M/mtot)/(4.0*PI*pow(aplum,3)) * pow( 1.0 + pow(radius_plum,2.0) / pow(aplum,2.0) ,-5.0/2.0);
+		rho_dens[j][1] /= pow(cc,3);
+	}
 	return 0;
 }
 
-int generate_king(int N, double W0, double **star, double *rvir, double *rh, double *rking, double D, int symmetry, int N2){
+int generate_king(int N, double W0, double **star, double *rvir, double *rh, double *rking, double D, int symmetry, int N2, double **rho_dens, double cc, double Mass, double mtot){
 	
 	//ODE variables
 	int M = 10001;				//Number of interpolation points
@@ -2513,7 +2607,10 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
                			w =-1;
 		                return 0;
 			}
-		
+			
+			rho_dens[i][1] = densty(w)/den;
+			rho_dens[i][0] = r;
+
 			vmax = sqrt(2.0*w);
 			do {
 				speed = vmax*drand48();
@@ -2594,7 +2691,9 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 				printf("radius too big\n");
 			}
 			
-			
+			rho_dens[i][1] = densty(w)/den;
+			rho_dens[i][0] = r;
+
 			vmax = sqrt(2.0*w);
 			do {
 				speed = vmax*drand48();
@@ -2607,9 +2706,7 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 		
 	}
 
-	double ke = 0.0;
-	double vscale;
-	double rvir_king = -pow(totmas,2)/(2.0*pot);
+	double ke = 0.0, vscale, rvir_king = -pow(totmas,2)/(2.0*pot);
 	for (i=0;i<N;i++) ke += 0.5*star[i+N2][0]*(pow(star[i+N2][4],2)+pow(star[i+N2][5],2)+pow(star[i+N2][6],2));
 	vscale = sqrt(4.0*ke);
 
@@ -2620,6 +2717,8 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 		star[i+N2][4] = star[i+N2][4]/vscale;
 		star[i+N2][5] = star[i+N2][5]/vscale;
 		star[i+N2][6] = star[i+N2][6]/vscale;
+		rho_dens[i][0] = rho_dens[i][0]/(rvir_king)*cc;///rvir_king*cc;
+		rho_dens[i][1] = rho_dens[i][1]/totmas*(Mass/mtot)*pow(rvir_king/cc,3);//*pow(rvir_king/cc,3);//;
 	}
 
 	for (j=0;j<KMAX;j++) free (yp[j]);
@@ -3850,7 +3949,7 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 		vesc = 1.0E10;
 		if (BSE) printf("Keeping all compact remnants\n");
 	}		
-	printf("Vesc %f \n",vesc );
+//	printf("Vesc %f \n",vesc );
 	for (i=0; i<20; i++) zpars[i] = 0;
 	zcnsts_(&Z,zpars);  //get metallicity parameters
 	
@@ -4751,7 +4850,7 @@ int energy_order(double **star, int N, int Nstars, int N2){
 int radial_distance_order(double **star, int N){
 	int i,j;
 
-	int columns = 8;
+	int columns = 11;
 	double **star_temp;
 	star_temp = (double **)calloc(N,sizeof(double *));
 	for (j=0;j<N;j++){
@@ -4787,6 +4886,9 @@ int radial_distance_order(double **star, int N){
 		star_temp[i][5] = star[(int) radial_distance[i][1]][5];
 		star_temp[i][6] = star[(int) radial_distance[i][1]][6];
 		star_temp[i][7] = star[(int) radial_distance[i][1]][7];
+		star_temp[i][8] = star[(int) radial_distance[i][1]][8];
+		star_temp[i][9] = star[(int) radial_distance[i][1]][9];
+		star_temp[i][10] = star[(int) radial_distance[i][1]][10];
 	}
 	
 	//copying back to original array
@@ -4799,6 +4901,9 @@ int radial_distance_order(double **star, int N){
 		star[i][5] = star_temp[i][5];
 		star[i][6] = star_temp[i][6];
 		star[i][7] = sqrt(star[i][1]*star[i][1]+star[i][2]*star[i][2]+star[i][3]*star[i][3]);
+		star[i][8] = star_temp[i][8];
+		star[i][9] = star_temp[i][9];
+		star[i][10] = star_temp[i][10];
 	}
 
 	for (j=0;j<N;j++) free (radial_distance[j]);
@@ -5180,4 +5285,97 @@ void info(char *output, int N, double Mcl, int profile, double W0, double S, dou
 
 	fclose(INFO);
 
+}
+
+double interpl_density(int N, int Ni, int i, int j_star, double **inputJE_vect, double **star_temp, double ***rho_dens){
+		// N is hte lenght of the inputJE_vect that has been already interpolated: called the first time N = N[0]; the second time N = N[0]+N[1]
+		// N[i] is hte leght of the rho_dens to be interpolated:  called the first time N[i] = N[1]; the second time N[i] = N[2]
+		// i is the index of the population to be interpolated
+	int j;
+	int kmax1 = N, kmax2=Ni;
+	double **inputJE_vect_temp;
+
+	inputJE_vect_temp = (double **)calloc(N,sizeof(double *)); // [0] - r; [1] - rho; [2] - cummass
+	for (j=0;j<N;j++){
+		inputJE_vect_temp[j] = (double *)calloc(2,sizeof(double));
+		if (inputJE_vect_temp[j] == NULL) {
+			printf("\nMemory allocation failed!\n");
+			return 0;
+		}
+	}
+	for (j=0;j<N;j++) {
+		inputJE_vect_temp[j][0] = inputJE_vect[j][0];
+		inputJE_vect_temp[j][1] = inputJE_vect[j][1];
+	}
+
+
+	for(j=0;j<N;j++){ //finding the index of the star in the first population that  r_j_1 > r_max_2 (overlapping of the two population)
+		if( inputJE_vect_temp[j][0] > rho_dens[i][Ni-1][0]) {
+			kmax1 = j;
+			break;
+		}
+	}
+
+	if (inputJE_vect_temp[N-1][0] < rho_dens[i][Ni-1][0]){ //when the second generation is more large than the first, i.e. King (1) - Plummer (2)
+		for(j=0;j<Ni;j++){
+			if(rho_dens[i][j][0] > inputJE_vect_temp[N-1][0]) {
+				kmax2 = j;
+				break;
+			}
+		}
+	}
+//	printf("kmax1 %i kmax2 %i N %i Ni %i \n", kmax1, kmax2, N, Ni);
+
+	for(j=0;j<kmax2;j++){ 
+		inputJE_vect[j][1] = rho_dens[i][j][1] + interpolation(inputJE_vect_temp, N, rho_dens[i][j][0]); // interpolation for first population density 
+		inputJE_vect[j][0] = rho_dens[i][j][0];
+	}
+
+	if (kmax2 != Ni) { // apply only when the second generation is larger than the first, i.e. King (1) - Plummer (2)
+		for(j=kmax2;j<Ni;j++){
+			inputJE_vect[j][1] = rho_dens[i][j][1];
+			inputJE_vect[j][0] = rho_dens[i][j][0];	
+		}
+	}
+
+	for(j=0;j<kmax1;j++){ 
+		inputJE_vect[j+Ni][1] = inputJE_vect_temp[j][1] + interpolation(rho_dens[i], Ni, inputJE_vect_temp[j][0]); // interpolation for first population density 
+		inputJE_vect[j+Ni][0] = inputJE_vect_temp[j][0];
+	}
+
+	for(j=kmax1;j<N;j++){ // properties from only first populatoin
+		inputJE_vect[j+Ni][1] = inputJE_vect_temp[j][1];
+		inputJE_vect[j+Ni][0] = inputJE_vect_temp[j][0];
+	}
+
+	for (j=0;j<N;j++) free (inputJE_vect_temp[j]);
+	free(inputJE_vect_temp);
+	return 0;
+}
+
+double interpolation(double **x, int n, double a){
+	int i,j;
+	double k,s,t;
+	int i1,i2;
+
+	for(i=0; i<n; i++) {
+		if(x[i][0] > a){
+			if (i == 0){
+				i1 = 0;
+				i2 = 1;
+			} else if (i == n-1){
+				i1 = n-2;
+				i2 = n-1;
+			} else {
+				i1 = i-1;
+				i2 = i;
+			}
+			break;
+		}
+	}
+
+	k = x[i1][1] + (a-x[i1][0])/(x[i2][0]-x[i1][0]) * (x[i2][1]-x[i1][1]);
+
+
+	return k;
 }

@@ -225,6 +225,9 @@
       key = "Mcluster:outputf"
       call config_getint(outputf, 0, key, conf);
 
+      key = "Mcluster:check_en"
+      call config_getint(check_en, 1, key, conf);
+
 *
       return
 *

@@ -164,7 +164,7 @@ extern struct
 extern struct
 {
    int potential_energy, tf, mclusteron,\
-       seedmc, outputf;
+       seedmc, outputf, check_en;
 } mclusteri_;
 
 extern struct
@@ -187,8 +187,8 @@ int generate_m4(int *N, double **star, double alpha, double beta, double mu,  do
 double alogam(double x, int *ifault);
 double betain(double x, double p, double q, double beta, int *ifault);
 double r8_abs(double x);
-int generate_plummer(int N, double **star, double rtide, double rvir, double D, int symmetry, double Q, int N2);
-int generate_king(int N, double W0, double **star, double *rvir, double *rh, double *rking, double D, int symmetry, int N2); 
+int generate_plummer(int N, double **star, double rtide, double rvir, double D, int symmetry, double Q, int N2, double **rho_dens, double conc, double M, double mtot);
+int generate_king(int N, double W0, double **star, double *rvir, double *rh, double *rking, double D, int symmetry, int N2, double **rho_dens, double cc, double Mass, double mtot); 
 double densty(double z);
 int odeint(double ystart0, double ystart1, double x1, double x2, double den, int *kount, double *xp, double **yp, int M, int KMAX);	 
 int derivs(double x, double *y, double *dydx, double den);
@@ -236,3 +236,5 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 int multiplearraytodouble(char str[], double **array);
 int arraytodouble(char str[], double *array);
 void info(char *output, int N, double Mcl, int profile, double W0, double S, double D, double Q, double Rh, double gamma[], double a, double Rmax, double tcrit, int tf, double RG[], double VG[], int mfunc, double single_mass, double mlow, double mup, double alpha[], double mlim[], double alpha_L3, double beta_L3, double mu_L3, int weidner, int mloss, int remnant, double epoch, double Z, int prantzos, int nbin, double fbin, int pairing, double msort, int adis, double amin, double amax, int eigen, int BSE, double extmass, double extrad, double extdecay, double extstart, int code, int seed, double dtadj, double dtout, double dtplot, int gpu, int regupdate, int etaupdate, int esc, int units, int match, int symmetry, int OBperiods);
+double interpl_density(int N, int Ni, int i, int j_star, double **inputJE_vect, double **star_temp, double ***rho_dens);
+double interpolation(double **x, int n, double a);

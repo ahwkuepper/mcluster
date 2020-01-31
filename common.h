@@ -5,7 +5,7 @@
 * mcluster parameters
 *
       integer, dimension(1:10) :: npop, initmodel, imfg, pairing,
-     &         adis, eigen
+     &         adis, eigen, check_en
       integer potential_energy, tf, mclusteron, seedmc,numpop,
      &         outputf
 
@@ -32,7 +32,7 @@
      &       zini_pop
 
       common /mclusteri/ potential_energy, tf, mclusteron, seedmc,
-     &       outputf
+     &       outputf, check_en
 
       common /mclusterd/ qvir, rbar, rh_mcl
       common /mclusterchar/ alphaimfchar, mlimimfchar
