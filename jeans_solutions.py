@@ -43,9 +43,9 @@ def jeans_equation_solution():
   rho=smooth(rho,10) #Rho is the density profiles
   interpfuc = interpolate.interp1d(r,rho,kind='linear',fill_value='extrapolate')
   rhogrd = interpfuc(rgrd)
-  for i in range(0,ngrd):
-    if rhogrd[i] == 0.0:
-      rhogrd[i] = 1E-8 # taking care of the no tidal field case: rho could have been extrapolated with zero values
+#  for i in range(0,ngrd):
+#    if rhogrd[i] == 0.0:
+#      rhogrd[i] = 1E-8 # taking care of the no tidal field case: rho could have been extrapolated with zero values
 
   interpfuc=interpolate.interp1d(r,m,kind='linear',fill_value='extrapolate') #m is the cumulative mass profiles
   mgrd = interpfuc(rgrd)
@@ -71,7 +71,7 @@ def jeans_equation_solution():
   np.random.seed(seed)
   for i in range(0,ntot):
     V = vesc[i]
-    while abs(V) > abs(0.99*vesc[i]):
+    while V > 0.99*vesc[i]:
       vx[i]=veld[i]*np.random.standard_normal()
       vy[i]=veld[i]*np.random.standard_normal()
       vz[i]=veld[i]*np.random.standard_normal()
@@ -80,7 +80,7 @@ def jeans_equation_solution():
 #  print(vx)
   f = open('outputJE.txt',"w")
   for i in range(0,ntot):
-    f.write("{0:.6f} {1:.6f} {2:.6f}\n".format(vx[i],vy[i],vz[i]))
+    f.write("{0:.6e} {1:.6e} {2:.6e}\n".format(vx[i],vy[i],vz[i]))
   f.close()
 
 if __name__ == "__main__":

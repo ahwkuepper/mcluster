@@ -463,7 +463,7 @@ int main (int argv, char **argc) {
 
 	
 	double ***rho_dens;
-	rho_dens = (double **)calloc(numberofpop,sizeof(double **));
+	rho_dens = (double ***)calloc(numberofpop,sizeof(double **));
 	for (i=0;i<numberofpop;i++){ 
 		rho_dens[i] = (double **)calloc(N[i],sizeof(double *));
 		for (j=0;j<N[i];j++){
@@ -656,11 +656,11 @@ int main (int argv, char **argc) {
 				}
 			} else {
 				if(i==0){
-						double perc = Mtotal/M[i];
+					double perc = Mtotal/M[i];
 					rvir = (perc)*(rh_mcl)/0.772764;
-					} else {
+				} else {
 					rvir = rh_mcl/0.772764;
-			}
+				}
 			}
 			//rvir[i] = Rh[i]/0.76857063065978; //(value provided by L. Subr) 
 			generate_subr(N[i], S[i], star, rtide, rvir, Nsub);
@@ -941,7 +941,7 @@ int main (int argv, char **argc) {
 			printf("\noutputJE.txt opened successfully\n");
 			for (j=0;j<Ntot;j++) {
 				fgets(buf, sizeof(buf), outputJE);
-				sscanf(buf, "%f %f %f", &vel_x_mom, &vel_y_mom, &vel_z_mom);
+				sscanf(buf, "%e %e %e", &vel_x_mom, &vel_y_mom, &vel_z_mom);
 				star_temp[j][4] = vel_x_mom, star_temp[j][5] = vel_y_mom, star_temp[j][6] = vel_z_mom;
 			}
 		}
@@ -1338,7 +1338,7 @@ int main (int argv, char **argc) {
 			} else {
 				double mlowest = MMAX; //search lowest mass star
 				for (j=0;j<Ntot;j++) {
-					if (star[j][0] < mlowest) mlowest = star[j][0];
+					if (star[j][0] < mlowest && star[j][0] != 0.0) mlowest = star[j][0];
 				}
 				double radlowest;
 				standalone_rzamsf(mlowest,&radlowest);
